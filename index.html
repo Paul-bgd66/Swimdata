@@ -6220,49 +6220,28 @@ async function hrvHandleRRFile(file){
     const diffs=rr.slice(1).map((v,i)=>v-rr[i]);
     const rmssd=Math.round(Math.sqrt(diffs.reduce((a,b)=>a+b*b,0)/diffs.length)*10)/10;
 
-    // Appel Claude avec contexte historique
+    // Appel /api/hrv (clé Anthropic côté serveur)
     const db=loadHRVDB();
     const nageur=db.nageurs.find(n=>n.nom===_hrvNageurActif);
     const hist=nageur?.historique||[];
-    const histCtx=hist.length>=2
-      ?'Historique récent : '+hist.slice(-5).map(h=>h.date+' score='+h.note+'/10').join(' | ')
-      :'Pas encore d\'historique ('+hist.length+'/7 mesures pour le profil personnel).';
 
-    const response=await fetch('https://api.anthropic.com/v1/messages',{
+    const response=await fetch('/api/hrv',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:400,
-        messages:[{
-          role:'user',
-          content:`Nageur : ${_hrvNageurActif}. Test HRV orthostatique.
-FC moyenne : ${fc} bpm. RMSSD : ${rmssd} ms. Battements analysés : ${rr.length}.
-${histCtx}
-
-Note /10 seuils absolus + contexte historique si disponible :
-FC : <50→10 | 50-55→8.5 | 55-60→7 | 60-65→5.5 | 65-70→4 | >70→2.5
-RMSSD : >60→10 | >45→8.5 | >35→7 | >25→5.5 | >15→4 | <15→2.5
-Score = moyenne FC + RMSSD (pondéré avec historique perso si dispo).
-Commentaire 1-2 phrases, style coach, orienté performance.
-${promptLang()}
-JSON UNIQUEMENT : {"note":7.5,"commentaire":"…","fc":${fc},"rmssd":${rmssd}}`
-        }]
+        rr,
+        nageur:_hrvNageurActif,
+        historique:hist,
+        clubId:(typeof currentClub!=='undefined'&&currentClub)?currentClub.id:null,
+        coachId:(typeof currentCoachId!=='undefined')?currentCoachId:null,
+        lang:_lang||'fr',
       })
     });
-    const data=await response.json();
-    let raw=(data.content||[]).find(b=>b.type==='text')?.text||'';
-    raw=raw.replace(/```json|```/g,'').trim();
-    const parsed=JSON.parse(raw);
-
-    const entry={
-      date:today(),
-      note:parsed.note,
-      commentaire:parsed.commentaire||'',
-      source:'rr',
-      fc:parsed.fc||fc,
-      rmssd:parsed.rmssd||rmssd,
-    };
+    if(!response.ok){
+      const err=await response.json().catch(()=>({}));
+      throw new Error(err.error||'Erreur serveur '+response.status);
+    }
+    const entry=await response.json();
 
     if(nageur){
       nageur.historique.push(entry);
