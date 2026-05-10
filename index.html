@@ -479,7 +479,7 @@ body.visitor-mode .visitor-banner{display:flex}
 .p-modal-foot{padding:10px 18px 16px;display:flex;gap:8px;justify-content:flex-end}
 
 /* ── SUIVI HRV ── */
-.hrv-gauge-wrap{position:relative;flex-shrink:0}
+.hrv-gauge-wrap{position:relative;flex-shrink:0;overflow:hidden}
 .hrv-gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .hrv-gauge-score{font-family:'Bebas Neue',sans-serif;line-height:1}
 .hrv-gauge-sub{font-size:.6rem;color:var(--muted)}
@@ -5958,8 +5958,8 @@ function renderHRVProfil(){
   <div class="hrv-card" style="margin-bottom:16px">
     <div class="sec-title" style="margin-bottom:12px">${t('hrv.form.today')}</div>
     ${derniere?`
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hrv-gauge-wrap">${hrvGaugeSVG(derniere.note,88)}</div>
+    <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:12px">
+      <div class="hrv-gauge-wrap" style="width:80px;height:80px;flex-shrink:0">${hrvGaugeSVG(derniere.note,80)}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:.68rem;color:var(--muted);margin-bottom:6px">${derniere.date}${derniere.source?` · ${derniere.source==='photo'?'📷 Photo':'📂 RR'}`:''}</div>
         ${hrvBarHTML(derniere.note)}
