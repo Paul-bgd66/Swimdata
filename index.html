@@ -1166,10 +1166,10 @@ body.visitor-mode .visitor-banner{display:flex}
       <div style="font-size:.62rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px" id="depot-link-label">Lien EliteHRV</div>
       <div style="position:relative;margin-bottom:16px">
         <div style="display:flex;gap:8px">
-          <input id="depot-lien-input" type="text" placeholder="Colle ton lien d'export ici…" disabled style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 13px;color:rgba(255,255,255,.25);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;cursor:not-allowed">
-          <button disabled style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;color:rgba(255,255,255,.2);font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:not-allowed">Envoyer</button>
+          <input id="depot-lien-input" type="text" placeholder="Colle ton lien d'export ici…" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 13px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none" onkeydown="if(event.key==='Enter')depotHandleLien()">
+          <button onclick="depotHandleLien()" style="background:var(--blue2);border:none;border-radius:8px;padding:10px 14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer">Envoyer</button>
         </div>
-        <div style="font-size:.68rem;color:rgba(255,255,255,.25);margin-top:6px;font-style:italic" id="depot-soon-text">🔒 Bientôt disponible — en attendant, dépose ton fichier ci-dessous</div>
+        <div style="font-size:.68rem;color:rgba(255,255,255,.3);margin-top:6px" id="depot-soon-text">Lien de partage EliteHRV — onglet Export → Share link</div>
       </div>
       <div style="height:1px;background:rgba(255,255,255,.08);margin-bottom:16px"></div>
       <div style="font-size:.62rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px" id="depot-rr-label">Fichier RR</div>
@@ -5440,7 +5440,7 @@ var T = {
   'depot.none':           { fr:'Aucun nageur enregistré.', en:'No swimmers registered.', es:'Ningún nadador registrado.' },
   'depot.none.sub':       { fr:'Demande à ton coach de créer ton profil HRV.', en:'Ask your coach to create your HRV profile.', es:'Pide a tu entrenador que cree tu perfil HRV.' },
   'depot.link':           { fr:'Lien EliteHRV',       en:'EliteHRV Link',      es:'Enlace EliteHRV' },
-  'depot.link.soon':      { fr:'🔒 Bientôt disponible — en attendant, dépose ton fichier ci-dessous', en:'🔒 Coming soon — in the meantime, drop your file below', es:'🔒 Próximamente — mientras tanto, deposita tu archivo abajo' },
+  'depot.link.soon':      { fr:'Lien de partage EliteHRV — onglet Export → Share link', en:'EliteHRV share link — Export tab → Share link', es:'Enlace de compartir EliteHRV — pestaña Export → Share link' },
   'depot.rr':             { fr:'Fichier RR',          en:'RR File',            es:'Archivo RR' },
   'depot.drop':           { fr:'Glisse ton fichier ici', en:'Drop your file here', es:'Arrastra tu archivo aquí' },
   'depot.or':             { fr:'ou clique pour sélectionner — format .txt', en:'or click to select — .txt format', es:'o haz clic para seleccionar — formato .txt' },
@@ -6328,6 +6328,37 @@ function depotSelectNageur(nom,coachId,storageKey){
   try{var db=JSON.parse(localStorage.getItem(storageKey));var nageur=db&&db.nageurs?db.nageurs.find(function(n){return n.nom===nom}):null;var last=nageur&&nageur.historique?nageur.historique.slice(-1)[0]:null;document.getElementById('depot-nageur-last').textContent=last?t('depot.last')+last.date:t('depot.no.measure');}catch(e){document.getElementById('depot-nageur-last').textContent='';}
 }
 function depotBackToNageur(){depotReset();}
+
+async function depotHandleLien(){
+  var input=document.getElementById('depot-lien-input');
+  var url=(input?input.value||'':'').trim();
+  if(!url)return;
+  var loadEl=document.getElementById('depot-loading'),errEl=document.getElementById('depot-error');
+  loadEl.style.display='';errEl.style.display='none';
+  try{
+    var res=await fetch('/api/elitehrv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});
+    var data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Erreur serveur '+res.status);
+    var _lines=data.raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+    var rr=[];
+    _lines.forEach(function(line){var clean=line.trim().replace(',','.');if(!clean)return;var v=parseFloat(clean);if(!isNaN(v)&&v>=300&&v<=2000)rr.push(v);});
+    if(rr.length<50){loadEl.style.display='none';errEl.style.display='';errEl.textContent='Fichier invalide — '+rr.length+' intervalles trouvés (minimum 50 requis).';return;}
+    var mean_rr=rr.reduce(function(a,b){return a+b},0)/rr.length;
+    var fc=Math.round(60000/mean_rr*10)/10;
+    var diffs=rr.slice(1).map(function(v,i){return v-rr[i]});
+    var rmssd=Math.round(Math.sqrt(diffs.reduce(function(a,b){return a+b*b},0)/diffs.length)*10)/10;
+    var scoreFC=fc<50?10:fc<55?8.5:fc<60?7:fc<65?5.5:fc<70?4:2.5;
+    var scoreRMSSD=rmssd>60?10:rmssd>45?8.5:rmssd>35?7:rmssd>25?5.5:rmssd>15?4:2.5;
+    var note=Math.round((scoreFC+scoreRMSSD)/2*10)/10;
+    var db;try{db=JSON.parse(localStorage.getItem(_depotStorageKey))||{nageurs:[]};}catch(e){db={nageurs:[]};}
+    var nageur=db.nageurs.find(function(n){return n.nom===_depotNageurNom});
+    if(nageur){nageur.historique.push({id:uid(),date:today(),note:note,fc:fc,rmssd:rmssd,source:'rr',commentaire:''});localStorage.setItem(_depotStorageKey,JSON.stringify(db));}
+    if(input)input.value='';
+    loadEl.style.display='none';
+    document.getElementById('depot-step-upload').style.display='none';
+    document.getElementById('depot-step-done').style.display='';
+  }catch(err){loadEl.style.display='none';errEl.style.display='';errEl.textContent='Erreur : '+err.message;}
+}
 
 async function depotHandleFile(file){
   if(!file)return;
