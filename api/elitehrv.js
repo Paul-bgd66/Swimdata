@@ -65,26 +65,41 @@ export default async function handler(req) {
     return json(502, { error: 'Impossible de joindre EliteHRV : ' + err.message });
   }
 
-  if (!res.ok) {
-    return json(502, { error: `EliteHRV a répondu avec le code ${res.status}. Vérifiez que le lien est valide et non expiré.` });
-  }
+  const debug = {
+    status: res.status,
+    finalUrl: res.url,
+    contentType: res.headers.get('content-type') || '',
+    headers: Object.fromEntries(res.headers.entries()),
+  };
 
-  const contentType = res.headers.get('content-type') || '';
-  // Reject obvious non-data responses (HTML pages = login wall, error page, etc.)
-  if (contentType.includes('text/html')) {
-    return json(422, { error: 'Le lien pointe vers une page web au lieu d\'un fichier RR. Vérifiez que vous avez copié le lien d\'export direct.' });
-  }
-
-  let text;
+  let text = '';
   try { text = await res.text(); } catch (err) {
-    return json(502, { error: 'Lecture du fichier impossible : ' + err.message });
+    return json(502, { error: 'Lecture du fichier impossible : ' + err.message, debug });
+  }
+
+  debug.bodyPreview = text.slice(0, 200);
+
+  console.log('[elitehrv] debug', JSON.stringify(debug));
+
+  if (!res.ok) {
+    return json(502, {
+      error: `EliteHRV a répondu avec le code ${res.status}. Vérifiez que le lien est valide et non expiré.`,
+      debug,
+    });
+  }
+
+  if (debug.contentType.includes('text/html')) {
+    return json(422, {
+      error: 'Le lien pointe vers une page web au lieu d\'un fichier RR. Vérifiez que vous avez copié le lien d\'export direct.',
+      debug,
+    });
   }
 
   if (!text || text.trim().length === 0) {
-    return json(422, { error: 'Le fichier téléchargé est vide.' });
+    return json(422, { error: 'Le fichier téléchargé est vide.', debug });
   }
 
-  return new Response(JSON.stringify({ raw: text }), {
+  return new Response(JSON.stringify({ raw: text, debug }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...CORS },
   });
