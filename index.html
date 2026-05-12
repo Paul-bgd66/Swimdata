@@ -4548,7 +4548,13 @@ async function enterClub(){
   try{
     const res=await fetch('/api/clubs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,passwordHash})});
     const data=await res.json();
-    if(res.status===401||res.status===404){err.textContent=t('auth.club.err.wrong');return;}
+    if(res.status===401||res.status===404){
+      // API dit non — tenter quand même localStorage (club peut ne pas être dans Supabase)
+      const clubs=getClubs();
+      const localClub=clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.hash===passwordHash);
+      if(localClub){currentClub=localClub;showCoachScreen(localClub);return;}
+      err.textContent=t('auth.club.err.wrong');return;
+    }
     if(!res.ok)throw new Error(data.error||'Erreur '+res.status);
     currentClub=_clubFromApi(data);
     showCoachScreen(currentClub);
