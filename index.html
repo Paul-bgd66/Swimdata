@@ -4513,49 +4513,89 @@ function initDefaultClubs(){
 let currentClub=null;
 let currentCoachId=null;
 
-function enterClub(){
-  const name=document.getElementById('club-name-input').value.trim();
-  const pass=document.getElementById('club-pass-input').value;
-  const err=document.getElementById('club-err');
-  if(!name){err.textContent=t('auth.club.err.name');return}
-  if(!pass){err.textContent=t('auth.club.err.pass');return}
-  const clubs=getClubs();
-  const club=clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.hash===hashPass(pass));
-  if(!club){err.textContent=t('auth.club.err.wrong');return;}
-  currentClub=club;
-  showCoachScreen(club);
+// ── Helpers normalisation API (snake_case) → app (camelCase) ──
+function _clubFromApi(c){
+  return {id:c.id,name:c.name,shortName:c.short_name||c.name,color1:c.color1,color2:c.color2,theme:c.theme,email:c.email||'',coaches:[],hash:''};
 }
-
-function showCoachScreen(club){
-  // Migration : assigner role aux coachs existants sans rôle
-  if(club.coaches&&club.coaches.length&&!club.coaches.some(function(c){return c.role;})){
-    club.coaches[0].role='manager';
-    for(var _i=1;_i<club.coaches.length;_i++)club.coaches[_i].role='coach';
-    var _mclubs=getClubs();
-    var _mcl=_mclubs.find(function(c){return c.id===club.id;});
-    if(_mcl){_mcl.coaches=club.coaches;saveClubs(_mclubs);}
-    currentClub=club;
-  }
-  document.getElementById('sc-club-logo').textContent=club.shortName||club.name;
-  document.getElementById('sc-club-tagline').textContent=club.name;
-  // Affiche les coachs
+function _coachFromApi(c){
+  return {id:c.id,name:c.name,firstname:c.firstname||'',lastname:c.lastname||'',email:c.email||'',initials:c.initials,color:c.color||'#2176e8',hasPin:c.has_pin,hash:'',role:c.role,visitorMode:c.visitor_mode};
+}
+function _renderCoachGrid(coaches){
   document.getElementById('coaches-grid').innerHTML=
-    club.coaches.map(c=>`
+    coaches.map(c=>`
       <div class="coach-tile" onclick="selectCoach('${c.id}')">
         <div class="coach-tile-av" style="background:${c.color||'#2176e8'}">${c.initials||getInitials(c.name)}</div>
         <div class="coach-tile-name">${c.name}${c.role==='manager'?' ⭐':''}</div>
         <div class="coach-tile-lock">${c.hasPin?t('auth.tile.pin'):t('auth.tile.direct')}</div>
         ${c.visitorMode?`<div style="font-size:.6rem;color:#22c55e;margin-top:3px">${t('auth.tile.visible')}</div>`:''}
-      </div>
-      `).join('')+
+      </div>`).join('')+
     `<div class="coach-tile" onclick="showCreateCoach()" style="border-style:dashed;opacity:.6">
       <div class="coach-tile-av" style="background:rgba(255,255,255,.1);font-size:1.4rem">+</div>
       <div class="coach-tile-name">${t('auth.tile.new')}</div>
       <div class="coach-tile-lock">${t('auth.tile.create')}</div>
     </div>`;
+}
+
+async function enterClub(){
+  const name=document.getElementById('club-name-input').value.trim();
+  const pass=document.getElementById('club-pass-input').value;
+  const err=document.getElementById('club-err');
+  if(!name){err.textContent=t('auth.club.err.name');return;}
+  if(!pass){err.textContent=t('auth.club.err.pass');return;}
+  const passwordHash=hashPass(pass);
+
+  // Tentative API Supabase
+  try{
+    const res=await fetch('/api/clubs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,passwordHash})});
+    const data=await res.json();
+    if(res.status===401||res.status===404){err.textContent=t('auth.club.err.wrong');return;}
+    if(!res.ok)throw new Error(data.error||'Erreur '+res.status);
+    currentClub=_clubFromApi(data);
+    showCoachScreen(currentClub);
+    return;
+  }catch(apiErr){
+    console.warn('[enterClub] API unreachable, fallback localStorage:',apiErr.message);
+  }
+
+  // Fallback localStorage
+  const clubs=getClubs();
+  const club=clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.hash===passwordHash);
+  if(!club){err.textContent=t('auth.club.err.wrong');return;}
+  currentClub=club;
+  showCoachScreen(club);
+}
+
+async function showCoachScreen(club){
+  // Migration roles (fallback localStorage uniquement)
+  if(club.coaches&&club.coaches.length&&!club.coaches.some(function(c){return c.role;})){
+    club.coaches[0].role='manager';
+    for(var _i=1;_i<club.coaches.length;_i++)club.coaches[_i].role='coach';
+    var _mclubs=getClubs();var _mcl=_mclubs.find(function(c){return c.id===club.id;});
+    if(_mcl){_mcl.coaches=club.coaches;saveClubs(_mclubs);}
+    currentClub=club;
+  }
+  document.getElementById('sc-club-logo').textContent=club.shortName||club.name;
+  document.getElementById('sc-club-tagline').textContent=club.name;
   document.getElementById('coach-err').textContent='';
   showScreen('screen-coaches');
   applyClubBranding(club);
+
+  // Affiche d'abord les coaches localStorage si disponibles (évite l'écran vide)
+  if(club.coaches&&club.coaches.length)_renderCoachGrid(club.coaches);
+
+  // Tentative API pour liste à jour
+  try{
+    const res=await fetch('/api/coaches?clubId='+encodeURIComponent(club.id));
+    if(!res.ok)throw new Error('Erreur '+res.status);
+    const data=await res.json();
+    if(data.length){
+      currentClub.coaches=data.map(_coachFromApi);
+      _renderCoachGrid(currentClub.coaches);
+    }
+  }catch(e){
+    console.warn('[showCoachScreen] API coaches unreachable, using localStorage:',e.message);
+    if(!club.coaches||!club.coaches.length)_renderCoachGrid([]);
+  }
 }
 
 function launchVisitor(coachId){
@@ -4641,12 +4681,27 @@ function launchVisitorFromPin(){
   launchVisitor(coach.id);
 }
 
-function checkPin(){
+async function checkPin(){
   const val=document.getElementById('pin-input').value;
   const err=document.getElementById('pin-err');
-  const coach=(currentClub ? currentClub.coaches.find(function(c){return c.id===currentCoachId;}) : null);
+  const coach=(currentClub?currentClub.coaches.find(function(c){return c.id===currentCoachId;}):null);
   if(!coach)return;
-  if(hashPass(val)!==coach.hash){err.textContent=t('auth.pin.err');return}
+  const passwordHash=hashPass(val);
+
+  // Tentative API Supabase
+  try{
+    const res=await fetch('/api/coaches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clubId:currentClub.id,initials:coach.initials,passwordHash})});
+    const data=await res.json();
+    if(res.status===401){err.textContent=t('auth.pin.err');return;}
+    if(!res.ok)throw new Error(data.error||'Erreur '+res.status);
+    launchApp(_coachFromApi(data));
+    return;
+  }catch(apiErr){
+    console.warn('[checkPin] API unreachable, fallback localStorage:',apiErr.message);
+  }
+
+  // Fallback localStorage
+  if(passwordHash!==coach.hash){err.textContent=t('auth.pin.err');return;}
   launchApp(coach);
 }
 
