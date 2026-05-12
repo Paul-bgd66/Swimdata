@@ -1400,7 +1400,20 @@ body.visitor-mode .visitor-banner{display:flex}
 // ════════════════════════════════
 const SK='c66_v3';
 let DB=(()=>{try{return JSON.parse(localStorage.getItem(SK))||{sessions:[],coach:{name:'Coach',initials:'C'}}}catch(e){return{sessions:[],coach:{name:'Coach',initials:'C'}}}})();
-function svDB(){if(window._visitorMode)return; if(window._userKey)localStorage.setItem(window._userKey,JSON.stringify(DB));else localStorage.setItem(SK,JSON.stringify(DB));}
+function _apiSyncCurrentSession(){
+  if(!window._currentSessionId||!currentClub||!currentCoachId)return;
+  var s=DB.sessions.find(function(x){return x.id===window._currentSessionId;});
+  if(!s)return;
+  fetch('/api/sessions',{method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,session:s})
+  }).catch(function(e){console.warn('[svDB sync]',e.message);});
+}
+function svDB(){
+  if(window._visitorMode)return;
+  if(window._userKey)localStorage.setItem(window._userKey,JSON.stringify(DB));
+  else localStorage.setItem(SK,JSON.stringify(DB));
+  _apiSyncCurrentSession();
+}
 
 // ════════════════════════════════
 // CONSTANTES INTENSITÉS
@@ -2798,8 +2811,15 @@ function delSeance(id){
   if(btn)btn.onclick=function(){
     modal.classList.remove('open');
     DB.sessions=DB.sessions.filter(function(s){return s.id!==_delSeanceId});
+    var _deletedId=_delSeanceId;
+    if(window._currentSessionId===_deletedId)window._currentSessionId=null;
     svDB();renderSB();renderHist();renderDash();
     showToast(t('toast.session.deleted'));
+    // Sync Supabase (fire-and-forget)
+    if(currentClub&&currentCoachId&&_deletedId){
+      fetch('/api/sessions?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId)+'&id='+encodeURIComponent(_deletedId),{method:'DELETE'})
+        .catch(function(e){console.warn('[delSeance sync]',e.message);});
+    }
     _delSeanceId=null;
   };
   if(modal)modal.classList.add('open');
@@ -4330,13 +4350,21 @@ function saveSeance(){
     rows:nonEmpty.map(r=>({...r})),
     savedAt:new Date().toISOString(),
   };
+  var _isNewSession=!(editingId&&DB.sessions.find(function(s){return s.id===editingId;}));
   if(editingId){
     const i=DB.sessions.findIndex(s=>s.id===editingId);
     if(i>=0)DB.sessions[i]=obj;else DB.sessions.push(obj);
   } else {
     DB.sessions.push(obj);editingId=obj.id;
   }
+  window._currentSessionId=obj.id;
   svDB();renderSB();
+  // Sync Supabase (fire-and-forget)
+  if(currentClub&&currentCoachId){
+    fetch('/api/sessions',{method:_isNewSession?'POST':'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,session:obj})
+    }).catch(function(e){console.warn('[saveSeance sync]',e.message);});
+  }
   showToast(t('sess.saved'));
   setTimeout(()=>showPanel('dash'),900);
 }
@@ -4744,7 +4772,7 @@ function launchApp(coach){
   const userKey='c66_coach_'+currentClub.id+'_'+coach.id;
   DB=(()=>{try{return JSON.parse(localStorage.getItem(userKey))||{sessions:[],coach:{name:coach.name,initials:coach.initials||getInitials(coach.name)}}}catch(e){return{sessions:[],coach:{name:coach.name,initials:coach.initials||getInitials(coach.name)}}}})();
   window._userKey=userKey;
-  window.svDB=()=>localStorage.setItem(userKey,JSON.stringify(DB));
+  window.svDB=function(){localStorage.setItem(userKey,JSON.stringify(DB));_apiSyncCurrentSession();};
   DB.coach={name:coach.name,initials:coach.initials||getInitials(coach.name)};
   // Header
   document.getElementById('coach-av').textContent=coach.initials||getInitials(coach.name);
@@ -4762,6 +4790,25 @@ function launchApp(coach){
   renderGFBar();
   renderSB();
   selPeriod('week');
+  // Merge séances Supabase → localStorage (fire-and-forget)
+  var _mergeClubId=currentClub.id,_mergeCoachId=coach.id,_mergeKey=userKey;
+  fetch('/api/sessions?clubId='+encodeURIComponent(_mergeClubId)+'&coachId='+encodeURIComponent(_mergeCoachId))
+    .then(function(r){return r.ok?r.json():Promise.reject('status '+r.status);})
+    .then(function(remote){
+      if(!remote||!remote.length)return;
+      var changed=false;
+      remote.forEach(function(rs){
+        var norm={id:rs.id,name:rs.name,date:rs.date,pool:rs.pool||'',notes:rs.notes||'',rows:rs.rows||[],savedAt:rs.saved_at||''};
+        var idx=DB.sessions.findIndex(function(ls){return ls.id===rs.id;});
+        if(idx>=0){
+          if(!DB.sessions[idx].savedAt||rs.saved_at>DB.sessions[idx].savedAt){DB.sessions[idx]=norm;changed=true;}
+        } else {
+          DB.sessions.push(norm);changed=true;
+        }
+      });
+      if(changed){localStorage.setItem(_mergeKey,JSON.stringify(DB));renderSB();}
+    })
+    .catch(function(e){console.warn('[launchApp] sessions merge:',e);});
 }
 
 // ── PARAMÈTRES COACH — PIN ──
