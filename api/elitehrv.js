@@ -1,4 +1,5 @@
 export const config = { runtime: 'nodejs' };
+export const maxDuration = 60;
 
 // /api/elitehrv.js
 // POST { url }  → suit les redirections, télécharge le ZIP EliteHRV, extrait le fichier RR le plus récent, retourne { raw: string }
