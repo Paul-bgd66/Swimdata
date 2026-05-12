@@ -61,6 +61,8 @@ export default async function handler(req) {
   const timeoutId = setTimeout(() => controller.abort(), 8000);
   const fetchStart = Date.now();
 
+  console.log('[elitehrv] fetch start', new Date().toISOString());
+
   let res;
   try {
     res = await fetch(url.trim(), {
@@ -82,6 +84,7 @@ export default async function handler(req) {
     });
   }
   clearTimeout(timeoutId);
+  console.log('[elitehrv] fetch done', Date.now() - fetchStart, 'ms');
 
   const debug = {
     fetchDurationMs: Date.now() - fetchStart,
