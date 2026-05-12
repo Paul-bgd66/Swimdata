@@ -56,20 +56,34 @@ export default async function handler(req) {
     return json(400, { error: 'URL non autorisée. Seuls les liens elitehrv.com sont acceptés.' });
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const fetchStart = Date.now();
+
   let res;
   try {
     res = await fetch(url.trim(), {
       redirect: 'follow',
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; SwimData/1.0)',
         'Accept': 'text/plain,text/csv,application/octet-stream,*/*',
       },
     });
   } catch (err) {
-    return json(502, { error: 'Impossible de joindre EliteHRV : ' + err.message });
+    clearTimeout(timeoutId);
+    const isTimeout = err.name === 'AbortError';
+    return json(502, {
+      error: isTimeout
+        ? 'Timeout — EliteHRV n\'a pas répondu en 8 secondes.'
+        : 'Impossible de joindre EliteHRV : ' + err.message,
+      debug: { fetchDurationMs: Date.now() - fetchStart },
+    });
   }
+  clearTimeout(timeoutId);
 
   const debug = {
+    fetchDurationMs: Date.now() - fetchStart,
     status: res.status,
     finalUrl: res.url,
     contentType: res.headers.get('content-type') || '',
