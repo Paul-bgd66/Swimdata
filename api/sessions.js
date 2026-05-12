@@ -40,17 +40,23 @@ export default async function handler(req) {
       .eq('coach_id', coachId)
       .order('date', { ascending: false });
 
-    if (error) return json(500, { error: error.message });
+    if (error) {
+      console.error('[sessions GET] supabase error', JSON.stringify(error));
+      return json(500, { error: error.message, details: error });
+    }
     return json(200, data);
   }
 
   if (req.method === 'POST') {
     let body;
-    try { body = await req.json(); } catch { return json(400, { error: 'Invalid JSON' }); }
+    try { body = await req.json(); } catch (e) {
+      console.error('[sessions POST] Invalid JSON', e.message);
+      return json(400, { error: 'Invalid JSON' });
+    }
     const { clubId, coachId, session } = body;
     if (!clubId || !coachId || !session) return json(400, { error: 'clubId, coachId, session required' });
 
-    const { data, error } = await supabase().from('sessions').insert({
+    const row = {
       id: session.id,
       club_id: clubId,
       coach_id: coachId,
@@ -60,32 +66,47 @@ export default async function handler(req) {
       notes: session.notes || '',
       rows: session.rows || [],
       saved_at: session.savedAt || new Date().toISOString(),
-    }).select().single();
+    };
+    console.log('[sessions POST] inserting', JSON.stringify(row));
 
-    if (error) return json(500, { error: error.message });
+    const { data, error } = await supabase().from('sessions').insert(row).select().single();
+
+    if (error) {
+      console.error('[sessions POST] supabase error', JSON.stringify(error));
+      return json(500, { error: error.message, details: error });
+    }
     return json(201, data);
   }
 
   if (req.method === 'PUT') {
     let body;
-    try { body = await req.json(); } catch { return json(400, { error: 'Invalid JSON' }); }
+    try { body = await req.json(); } catch (e) {
+      console.error('[sessions PUT] Invalid JSON', e.message);
+      return json(400, { error: 'Invalid JSON' });
+    }
     const { clubId, coachId, session } = body;
     if (!clubId || !coachId || !session?.id) return json(400, { error: 'clubId, coachId, session.id required' });
 
-    const { data, error } = await supabase().from('sessions').update({
+    const patch = {
       name: session.name || '',
       date: session.date || new Date().toISOString().slice(0, 10),
       pool: session.pool || '',
       notes: session.notes || '',
       rows: session.rows || [],
       saved_at: session.savedAt || new Date().toISOString(),
-    })
+    };
+    console.log('[sessions PUT] updating id=%s club=%s coach=%s patch=%s', session.id, clubId, coachId, JSON.stringify(patch));
+
+    const { data, error } = await supabase().from('sessions').update(patch)
       .eq('id', session.id)
       .eq('club_id', clubId)
       .eq('coach_id', coachId)
       .select().single();
 
-    if (error) return json(500, { error: error.message });
+    if (error) {
+      console.error('[sessions PUT] supabase error', JSON.stringify(error));
+      return json(500, { error: error.message, details: error });
+    }
     return json(200, data);
   }
 
@@ -101,7 +122,10 @@ export default async function handler(req) {
       .eq('club_id', clubId)
       .eq('coach_id', coachId);
 
-    if (error) return json(500, { error: error.message });
+    if (error) {
+      console.error('[sessions DELETE] supabase error', JSON.stringify(error));
+      return json(500, { error: error.message, details: error });
+    }
     return json(200, { ok: true });
   }
 
