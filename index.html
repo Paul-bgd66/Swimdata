@@ -1412,7 +1412,6 @@ function svDB(){
   if(window._visitorMode)return;
   if(window._userKey)localStorage.setItem(window._userKey,JSON.stringify(DB));
   else localStorage.setItem(SK,JSON.stringify(DB));
-  _apiSyncCurrentSession();
 }
 
 // ════════════════════════════════
@@ -4772,7 +4771,7 @@ function launchApp(coach){
   const userKey='c66_coach_'+currentClub.id+'_'+coach.id;
   DB=(()=>{try{return JSON.parse(localStorage.getItem(userKey))||{sessions:[],coach:{name:coach.name,initials:coach.initials||getInitials(coach.name)}}}catch(e){return{sessions:[],coach:{name:coach.name,initials:coach.initials||getInitials(coach.name)}}}})();
   window._userKey=userKey;
-  window.svDB=function(){localStorage.setItem(userKey,JSON.stringify(DB));_apiSyncCurrentSession();};
+  window.svDB=function(){localStorage.setItem(userKey,JSON.stringify(DB));};
   DB.coach={name:coach.name,initials:coach.initials||getInitials(coach.name)};
   // Header
   document.getElementById('coach-av').textContent=coach.initials||getInitials(coach.name);
