@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <title>SwimData</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -6336,13 +6337,34 @@ async function depotHandleLien(){
   var loadEl=document.getElementById('depot-loading'),errEl=document.getElementById('depot-error');
   loadEl.style.display='';errEl.style.display='none';
   try{
-    var res=await fetch('/api/elitehrv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});
-    var data=await res.json();
-    if(!res.ok)throw new Error(data.error||'Erreur serveur '+res.status);
-    var _lines=data.raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+    // Fetch direct depuis le browser
+    var res=await fetch(url);
+    if(!res.ok)throw new Error('Le serveur a répondu avec le code '+res.status+'. Vérifiez que le lien est valide.');
+    var arrayBuffer=await res.arrayBuffer();
+
+    // Décompression ZIP avec JSZip
+    var raw='';
+    try{
+      var zip=await JSZip.loadAsync(arrayBuffer);
+      var txtFiles=Object.keys(zip.files).filter(function(n){return !zip.files[n].dir&&n.endsWith('.txt');});
+      if(txtFiles.length===0)throw new Error('ZIP valide mais aucun fichier .txt trouvé.');
+      txtFiles.sort(function(a,b){return b.localeCompare(a);});
+      raw=await zip.files[txtFiles[0]].async('string');
+    }catch(zipErr){
+      // Pas un ZIP — texte brut
+      raw=new TextDecoder().decode(arrayBuffer);
+    }
+
+    // Parse intervalles RR
     var rr=[];
-    _lines.forEach(function(line){var clean=line.trim().replace(',','.');if(!clean)return;var v=parseFloat(clean);if(!isNaN(v)&&v>=300&&v<=2000)rr.push(v);});
+    raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').forEach(function(line){
+      var clean=line.trim().replace(',','.');
+      if(!clean)return;
+      var v=parseFloat(clean);
+      if(!isNaN(v)&&v>=300&&v<=2000)rr.push(v);
+    });
     if(rr.length<50){loadEl.style.display='none';errEl.style.display='';errEl.textContent='Fichier invalide — '+rr.length+' intervalles trouvés (minimum 50 requis).';return;}
+
     var mean_rr=rr.reduce(function(a,b){return a+b},0)/rr.length;
     var fc=Math.round(60000/mean_rr*10)/10;
     var diffs=rr.slice(1).map(function(v,i){return v-rr[i]});
