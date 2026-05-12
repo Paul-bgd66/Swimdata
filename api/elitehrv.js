@@ -1,3 +1,5 @@
+export const config = { runtime: 'nodejs' };
+
 // /api/elitehrv.js
 // POST { url }  → suit les redirections, télécharge le ZIP EliteHRV, extrait le fichier RR le plus récent, retourne { raw: string }
 
@@ -139,5 +141,3 @@ export default async function handler(req) {
     headers: { 'Content-Type': 'application/json', ...CORS },
   });
 }
-
-export const config = { runtime: 'nodejs' };
