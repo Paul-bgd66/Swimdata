@@ -1,5 +1,7 @@
 // /api/elitehrv.js
-// POST { url }  → suit les redirections, télécharge le fichier RR EliteHRV, retourne { raw: string }
+// POST { url }  → suit les redirections, télécharge le ZIP EliteHRV, extrait le fichier RR le plus récent, retourne { raw: string }
+
+import JSZip from 'jszip';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -72,16 +74,14 @@ export default async function handler(req) {
     headers: Object.fromEntries(res.headers.entries()),
   };
 
-  let text = '';
-  try { text = await res.text(); } catch (err) {
+  let arrayBuffer;
+  try { arrayBuffer = await res.arrayBuffer(); } catch (err) {
     return json(502, { error: 'Lecture du fichier impossible : ' + err.message, debug });
   }
 
-  debug.bodyPreview = text.slice(0, 200);
-
-  console.log('[elitehrv] debug', JSON.stringify(debug));
-
   if (!res.ok) {
+    debug.bodyPreview = new TextDecoder().decode(arrayBuffer).slice(0, 200);
+    console.log('[elitehrv] debug', JSON.stringify(debug));
     return json(502, {
       error: `EliteHRV a répondu avec le code ${res.status}. Vérifiez que le lien est valide et non expiré.`,
       debug,
@@ -89,17 +89,52 @@ export default async function handler(req) {
   }
 
   if (debug.contentType.includes('text/html')) {
+    debug.bodyPreview = new TextDecoder().decode(arrayBuffer).slice(0, 200);
+    console.log('[elitehrv] debug', JSON.stringify(debug));
     return json(422, {
-      error: 'Le lien pointe vers une page web au lieu d\'un fichier RR. Vérifiez que vous avez copié le lien d\'export direct.',
+      error: "Le lien pointe vers une page web au lieu d'un fichier RR. Vérifiez que vous avez copié le lien d'export direct.",
       debug,
     });
   }
 
-  if (!text || text.trim().length === 0) {
-    return json(422, { error: 'Le fichier téléchargé est vide.', debug });
+  // ── Tentative de décompression ZIP ──────────────────────────────
+  let raw;
+  try {
+    const zip = await JSZip.loadAsync(arrayBuffer);
+
+    const txtFiles = Object.keys(zip.files).filter(
+      (name) => !zip.files[name].dir && name.endsWith('.txt')
+    );
+
+    debug.filesFound = txtFiles.length;
+
+    if (txtFiles.length === 0) {
+      debug.bodyPreview = '(ZIP valide mais aucun .txt trouvé)';
+      console.log('[elitehrv] debug', JSON.stringify(debug));
+      return json(422, { error: 'Le ZIP ne contient aucun fichier .txt avec des intervalles RR.', debug });
+    }
+
+    // Tri décroissant par nom → le plus récent en premier (YYYY-MM-DD HH-MM-SS.txt)
+    txtFiles.sort((a, b) => b.localeCompare(a));
+    const selectedFile = txtFiles[0];
+    debug.selectedFile = selectedFile;
+
+    raw = await zip.files[selectedFile].async('string');
+  } catch {
+    // Pas un ZIP — on essaie en texte brut (fichier .txt direct)
+    raw = new TextDecoder().decode(arrayBuffer);
+    debug.filesFound = 0;
+    debug.selectedFile = '(texte brut)';
   }
 
-  return new Response(JSON.stringify({ raw: text, debug }), {
+  debug.bodyPreview = raw.slice(0, 200);
+  console.log('[elitehrv] debug', JSON.stringify(debug));
+
+  if (!raw || raw.trim().length === 0) {
+    return json(422, { error: 'Le fichier RR sélectionné est vide.', debug });
+  }
+
+  return new Response(JSON.stringify({ raw, debug }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...CORS },
   });
