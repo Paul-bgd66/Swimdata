@@ -2239,7 +2239,36 @@ function loadGroups(){
     {id:'spe',name:'Spé',color:'#f97316'},
   ]}catch(e){return[]}
 }
-function saveGroups(g){localStorage.setItem(GROUPS_KEY,JSON.stringify(g))}
+function saveGroups(g){
+  localStorage.setItem(GROUPS_KEY,JSON.stringify(g));
+  if(typeof currentClub!=='undefined'&&currentClub&&g&&g.length){
+    fetch('/api/groupes',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({clubId:currentClub.id,groups:g})})
+      .catch(function(e){console.warn('[saveGroups sync]',e.message);});
+  }
+}
+
+function _mergeGroupesFromApi(){
+  if(typeof currentClub==='undefined'||!currentClub)return;
+  fetch('/api/groupes?clubId='+encodeURIComponent(currentClub.id))
+    .then(function(r){return r.ok?r.json():Promise.reject('status '+r.status);})
+    .then(function(remote){
+      if(!remote||!remote.length)return;
+      var local=loadGroups();
+      var changed=false;
+      remote.forEach(function(rg){
+        var idx=local.findIndex(function(lg){return lg.id===rg.id;});
+        if(idx<0){local.push({id:rg.id,name:rg.name,color:rg.color});changed=true;}
+        else if(local[idx].name!==rg.name||local[idx].color!==rg.color){local[idx]={id:rg.id,name:rg.name,color:rg.color};changed=true;}
+      });
+      if(changed){
+        localStorage.setItem(GROUPS_KEY,JSON.stringify(local));
+        GROUPS=local;
+        renderGFBar();
+        renderGroupList();
+      }
+    })
+    .catch(function(e){console.warn('[_mergeGroupesFromApi]',e);});
+}
 let GROUPS=loadGroups();
 
 // Retourne l'id de groupe détecté en début de description ("Sprint : AEC3…" → "sprint")
@@ -3155,7 +3184,49 @@ function pDB() {
 
 function pSave() {
   var key = 'c66_poids_' + (window._userKey || 'default');
+  var toSync = [];
+  if(typeof currentClub!=='undefined'&&currentClub&&typeof currentCoachId!=='undefined'&&currentCoachId){
+    (_poidsDB.swimmers||[]).forEach(function(sw){
+      (sw.entries||[]).forEach(function(e){
+        if(!e._synced)toSync.push({prenom:sw.prenom,nom:sw.nom||'',date:e.date,weight:e.weight});
+      });
+    });
+    (_poidsDB.swimmers||[]).forEach(function(sw){(sw.entries||[]).forEach(function(e){e._synced=true;});});
+  }
   localStorage.setItem(key, JSON.stringify(_poidsDB));
+  if(toSync.length){
+    fetch('/api/poids',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,entries:toSync})})
+      .catch(function(e){console.warn('[pSave sync]',e.message);});
+  }
+}
+
+function _mergePoidsFromApi(){
+  if(typeof currentClub==='undefined'||!currentClub||typeof currentCoachId==='undefined'||!currentCoachId)return;
+  fetch('/api/poids?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId))
+    .then(function(r){return r.ok?r.json():Promise.reject('status '+r.status);})
+    .then(function(remote){
+      if(!remote||!remote.length)return;
+      var key='c66_poids_'+(window._userKey||'default');
+      pDB();
+      var changed=false;
+      remote.forEach(function(rsw){
+        var local=(_poidsDB.swimmers||[]).find(function(s){
+          return s.prenom.toLowerCase()===rsw.prenom.toLowerCase()&&(s.nom||'').toLowerCase()===(rsw.nom||'').toLowerCase();
+        });
+        if(!local){
+          _poidsDB.swimmers.push({id:uid(),prenom:rsw.prenom,nom:rsw.nom||'',entries:(rsw.entries||[]).map(function(e){return{id:uid(),date:e.date,weight:e.weight,_synced:true};})});
+          changed=true;
+        } else {
+          (rsw.entries||[]).forEach(function(re){
+            var exists=(local.entries||[]).find(function(le){return le.date===re.date;});
+            if(!exists){local.entries.push({id:uid(),date:re.date,weight:re.weight,_synced:true});changed=true;}
+          });
+          if(changed)local.entries.sort(function(a,b){return a.date.localeCompare(b.date);});
+        }
+      });
+      if(changed){localStorage.setItem(key,JSON.stringify(_poidsDB));poidsRenderNav();poidsRenderMain();}
+    })
+    .catch(function(e){console.warn('[_mergePoidsFromApi]',e);});
 }
 
 function renderPoids() {
@@ -3500,36 +3571,54 @@ function selectVideoSwimmer(id){
   renderVideo();
 }
 
-// Upload vidéo — stockée en base64 localement (Supabase Storage en prod)
 function handleVideoUpload(swimmerId, input){
   const file=input.files[0];
   if(!file)return;
   if(!file.type.startsWith('video/')){showToast(t('video.not.video'));return}
   if(file.size>150*1024*1024){showToast(t('video.too.large'));return}
+
+  // ── Upload Supabase Storage si connecté ──
+  if(typeof currentClub!=='undefined'&&currentClub&&typeof currentCoachId!=='undefined'&&currentCoachId){
+    const videoId=uid();
+    const ext=(file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const videoName=file.name.replace(/\.[^.]+$/,'');
+    const videoDate=today();
+    const db0=loadVDB();
+    const sw0=db0.swimmers.find(function(s){return s.id===swimmerId;});
+    const swimmerPrenom=sw0?sw0.prenom:'';
+    const swimmerNom=sw0?sw0.nom:'';
+    showToast(t('video.loading'));
+    fetch('/api/videos-upload?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId)+'&videoId='+encodeURIComponent(videoId)+'&ext='+encodeURIComponent(ext),{
+      method:'POST',headers:{'Content-Type':file.type},body:file,
+    })
+    .then(function(r){return r.ok?r.json():r.json().then(function(e){throw new Error(e.error||'Upload échoué');});})
+    .then(function(uploadData){
+      return fetch('/api/videos',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,swimmerId:swimmerId,swimmerPrenom:swimmerPrenom,swimmerNom:swimmerNom,videoId:videoId,name:videoName,date:videoDate,type:file.type,notes:'',storagePath:uploadData.storagePath,annotations:[]}),
+      });
+    })
+    .then(function(r){return r.ok?r.json():r.json().then(function(e){throw new Error(e.error||'Sauvegarde métadonnées échouée');});})
+    .then(function(d){
+      const db=loadVDB();const sw=db.swimmers.find(function(s){return s.id===swimmerId;});if(!sw)return;
+      sw.videos.push({id:videoId,name:videoName,date:videoDate,type:file.type,storage_path:d.storagePath||currentClub.id+'/'+currentCoachId+'/'+videoId+'.'+ext,notes:'',annotations:[]});
+      saveVDB(db);activeVideoId=videoId;showToast(t('toast.video.added'));renderVideo();
+      setTimeout(function(){const el=document.getElementById('vidcard-'+videoId);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},200);
+    })
+    .catch(function(err){showToast((t('video.load.error')||'Erreur')+' : '+err.message);});
+    return;
+  }
+
+  // ── Fallback localStorage base64 ──
   showToast(t('video.loading'));
   const reader=new FileReader();
-  reader.onload=e=>{
-    const db=loadVDB();
-    const sw=db.swimmers.find(s=>s.id===swimmerId);
-    if(!sw)return;
-    const video={
-      id:uid(),
-      name:file.name.replace(/\.[^.]+$/,''),
-      date:today(),
-      type:file.type,
-      data:e.target.result,
-      notes:'',
-      annotations:[],
-    };
-    sw.videos.push(video);
-    saveVDB(db);
-    activeVideoId=video.id;
-    showToast(t('toast.video.added'));
-    renderVideo();
-    // Scroll to new video
-    setTimeout(()=>{const el=document.getElementById('vidcard-'+video.id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},200);
+  reader.onload=function(e){
+    const db=loadVDB();const sw=db.swimmers.find(function(s){return s.id===swimmerId;});if(!sw)return;
+    const video={id:uid(),name:file.name.replace(/\.[^.]+$/,''),date:today(),type:file.type,data:e.target.result,notes:'',annotations:[]};
+    sw.videos.push(video);saveVDB(db);activeVideoId=video.id;showToast(t('toast.video.added'));renderVideo();
+    setTimeout(function(){const el=document.getElementById('vidcard-'+video.id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},200);
   };
-  reader.onerror=()=>showToast(t('video.load.error'));
+  reader.onerror=function(){showToast(t('video.load.error'));};
   reader.readAsDataURL(file);
 }
 
@@ -3570,11 +3659,17 @@ function delVideo(videoId){
     const db2=loadVDB();
     const sw2=db2.swimmers.find(s=>s.id===activeVideoSwimmerId);
     if(!sw2)return;
+    const vidToDelete=sw2.videos.find(function(v){return v.id===videoId;});
+    const storagePath=vidToDelete?vidToDelete.storage_path:null;
     sw2.videos=sw2.videos.filter(v=>v.id!==videoId);
     saveVDB(db2);
     if(activeVideoId===videoId) activeVideoId=sw2.videos.length>0?sw2.videos[0].id:null;
     renderVideo();
     showToast(t('toast.video.deleted'));
+    if(storagePath&&typeof currentClub!=='undefined'&&currentClub&&typeof currentCoachId!=='undefined'&&currentCoachId){
+      fetch('/api/videos?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId)+'&videoId='+encodeURIComponent(videoId)+'&storagePath='+encodeURIComponent(storagePath),{method:'DELETE'})
+        .catch(function(e){console.warn('[delVideo]',e.message);});
+    }
   };
   document.getElementById('vm-del').classList.add('open');
 }
@@ -3751,7 +3846,7 @@ function renderVidDetail(sw){
         <div style="border-top:1px solid var(--border)">
           <!-- LECTEUR -->
           <video id="vplayer-${vid.id}" controls style="width:100%;max-height:320px;background:#000;display:block">
-            <source src="${vid.data}" type="${vid.type}">
+            <source src="${vid.data||''}" type="${vid.type}"${vid.storage_path?' data-storage-path="'+vid.storage_path+'"':''}>
           </video>
 
           <!-- COMMENTAIRES HORODATÉS -->
@@ -3790,9 +3885,44 @@ function renderVidDetail(sw){
   }
 
   el.innerHTML=html;
+  _loadSignedVideoUrls();
 }
 
+function _loadSignedVideoUrls(){
+  if(typeof currentClub==='undefined'||!currentClub||typeof currentCoachId==='undefined'||!currentCoachId)return;
+  document.querySelectorAll('source[data-storage-path]').forEach(function(src){
+    var path=src.dataset.storagePath;
+    if(!path||src.src)return;
+    fetch('/api/videos?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId)+'&storagePath='+encodeURIComponent(path))
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){if(d&&d.signedUrl){src.src=d.signedUrl;src.parentElement.load();}})
+      .catch(function(){});
+  });
+}
 
+function _mergeVideosFromApi(){
+  if(typeof currentClub==='undefined'||!currentClub||typeof currentCoachId==='undefined'||!currentCoachId)return;
+  fetch('/api/videos?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId))
+    .then(function(r){return r.ok?r.json():Promise.reject('status '+r.status);})
+    .then(function(remote){
+      if(!remote||!remote.length)return;
+      var db=loadVDB();var changed=false;
+      remote.forEach(function(rsw){
+        var local=db.swimmers.find(function(s){return s.id===rsw.id;});
+        if(!local){
+          db.swimmers.push({id:rsw.id,prenom:rsw.prenom,nom:rsw.nom,videos:(rsw.videos||[]).map(function(v){return {id:v.id,name:v.name,date:v.date,type:v.type,storage_path:v.storage_path,notes:v.notes||'',annotations:v.annotations||[]};})});
+          changed=true;
+        } else {
+          (rsw.videos||[]).forEach(function(rv){
+            var exists=local.videos.find(function(lv){return lv.id===rv.id;});
+            if(!exists){local.videos.push({id:rv.id,name:rv.name,date:rv.date,type:rv.type,storage_path:rv.storage_path,notes:rv.notes||'',annotations:rv.annotations||[]});changed=true;}
+          });
+        }
+      });
+      if(changed){saveVDB(db);renderVideo();}
+    })
+    .catch(function(e){console.warn('[_mergeVideosFromApi]',e);});
+}
 
 
 
@@ -3801,7 +3931,36 @@ function renderVidDetail(sw){
 // ════════════════════════════════
 const PK=()=>'c66_planning_'+(window._userKey||'default');
 function loadPlan(){try{return JSON.parse(localStorage.getItem(PK()))||{weeks:[]}}catch(e){return{weeks:[]}}}
-function savePlan(p){localStorage.setItem(PK(),JSON.stringify(p))}
+function savePlan(p){
+  localStorage.setItem(PK(),JSON.stringify(p));
+  if(typeof currentClub!=='undefined'&&currentClub&&typeof currentCoachId!=='undefined'&&currentCoachId&&p.weeks&&p.weeks.length){
+    fetch('/api/planning',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,weeks:p.weeks})})
+      .catch(function(e){console.warn('[savePlan sync]',e.message);});
+  }
+}
+
+function _mergePlanFromApi(){
+  if(typeof currentClub==='undefined'||!currentClub||typeof currentCoachId==='undefined'||!currentCoachId)return;
+  fetch('/api/planning?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId))
+    .then(function(r){return r.ok?r.json():Promise.reject('status '+r.status);})
+    .then(function(remote){
+      if(!remote||!remote.weeks||!remote.weeks.length)return;
+      var plan=loadPlan();
+      var changed=false;
+      remote.weeks.forEach(function(rw){
+        var idx=plan.weeks.findIndex(function(lw){return lw.id===rw.id;});
+        if(idx<0){plan.weeks.push(rw);changed=true;}
+        else if(plan.weeks[idx].startDate!==rw.startDate){plan.weeks[idx]=rw;changed=true;}
+      });
+      if(changed){
+        plan.weeks.sort(function(a,b){return a.startDate.localeCompare(b.startDate);});
+        plan.weeks.forEach(function(w,i){w.mcNum=i+1;});
+        localStorage.setItem(PK(),JSON.stringify(plan));
+        renderPlanning();
+      }
+    })
+    .catch(function(e){console.warn('[_mergePlanFromApi]',e);});
+}
 
 const DAYS_PLAN=['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
 function DAYS_PLAN_FR(){return[t('day.mon'),t('day.tue'),t('day.wed'),t('day.thu'),t('day.fri'),t('day.sat'),t('day.sun')];}
@@ -4808,6 +4967,12 @@ function launchApp(coach){
       if(changed){localStorage.setItem(_mergeKey,JSON.stringify(DB));renderSB();}
     })
     .catch(function(e){console.warn('[launchApp] sessions merge:',e);});
+  _mergeHRVFromApi();
+  _mergePoidsFromApi();
+  _mergePerfFromApi();
+  _mergePlanFromApi();
+  _mergeGroupesFromApi();
+  _mergeVideosFromApi();
 }
 
 // ── PARAMÈTRES COACH — PIN ──
@@ -4866,6 +5031,8 @@ function saveCoachSettings(){
   co.visitorMode=document.getElementById('cs-visitor').value==='1';
   currentClub=cl;
   saveClubs(clubs);
+  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'updateCoach',clubId:cl.id,coachId:currentCoachId,changes:{hasPin:co.hasPin,hash:co.hash,visitorMode:co.visitorMode}})})
+    .catch(function(e){console.warn('[saveCoachSettings sync]',e.message);});
   document.getElementById('coach-settings-modal').classList.remove('open');
   showToast(t('coach.settings.saved'));
 }
@@ -4877,6 +5044,8 @@ function removeCoachPin(){
   if(!co)return;
   co.hasPin=false;co.hash='';
   currentClub=cl;saveClubs(clubs);
+  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'updateCoach',clubId:cl.id,coachId:currentCoachId,changes:{hasPin:false,hash:''}})})
+    .catch(function(e){console.warn('[removeCoachPin sync]',e.message);});
   document.getElementById('cs-pin').value='';
   showToast(t('coach.pass.removed'));
 }
@@ -4885,9 +5054,16 @@ function delegateManager(newManagerId){
   var clubs=getClubs();
   var cl=clubs.find(function(c){return c.id===currentClub.id;});
   if(!cl)return;
+  var oldManagerId=(cl.coaches.find(function(c){return c.role==='manager';})||{}).id||null;
   cl.coaches.forEach(function(c){c.role=c.id===newManagerId?'manager':'coach';});
   currentClub=cl;
   saveClubs(clubs);
+  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'updateCoach',clubId:cl.id,coachId:newManagerId,changes:{role:'manager'}})})
+    .catch(function(e){console.warn('[delegateManager new sync]',e.message);});
+  if(oldManagerId&&oldManagerId!==newManagerId){
+    fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'updateCoach',clubId:cl.id,coachId:oldManagerId,changes:{role:'coach'}})})
+      .catch(function(e){console.warn('[delegateManager old sync]',e.message);});
+  }
   document.getElementById('coach-settings-modal').classList.remove('open');
   showCoachScreen(currentClub);
   showToast('⭐ '+t('coach.delegate')+' — '+((cl.coaches.find(function(c){return c.id===newManagerId;})||{}).name||''));
@@ -4958,6 +5134,8 @@ function createCoach(){
   cl.coaches.push(coach);
   saveClubs(clubs);
   currentClub=cl;
+  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'createCoach',clubId:cl.id,coach:coach})})
+    .catch(function(e){console.warn('[createCoach sync]',e.message);});
   hideCreateCoach();
   showCoachScreen(cl);
 }
@@ -4969,7 +5147,49 @@ function createCoach(){
 // ── DB ──
 function perfDBKey(){return 'c66_perf_'+(window._userKey||'default');}
 function loadPerfDB(){try{return JSON.parse(localStorage.getItem(perfDBKey()))||{nageurs:[]};}catch(e){return{nageurs:[]};}}
-function savePerfDB(db){localStorage.setItem(perfDBKey(),JSON.stringify(db));}
+function savePerfDB(db){
+  var toSync=[];
+  if(typeof currentClub!=='undefined'&&currentClub&&typeof currentCoachId!=='undefined'&&currentCoachId){
+    (db.nageurs||[]).forEach(function(n){
+      (n.performances||[]).forEach(function(p){
+        if(!p._synced)toSync.push({nageur_nom:n.nom,bassin:p.bassin,nage:p.nage,distance:p.distance,temps:p.temps,date:p.date,note:p.note||''});
+      });
+    });
+    (db.nageurs||[]).forEach(function(n){(n.performances||[]).forEach(function(p){p._synced=true;});});
+  }
+  localStorage.setItem(perfDBKey(),JSON.stringify(db));
+  if(toSync.length){
+    fetch('/api/performances',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,entries:toSync})})
+      .catch(function(e){console.warn('[savePerfDB sync]',e.message);});
+  }
+}
+
+function _mergePerfFromApi(){
+  if(typeof currentClub==='undefined'||!currentClub||typeof currentCoachId==='undefined'||!currentCoachId)return;
+  fetch('/api/performances?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId))
+    .then(function(r){return r.ok?r.json():Promise.reject('status '+r.status);})
+    .then(function(remote){
+      if(!remote||!remote.length)return;
+      var db=loadPerfDB();
+      var changed=false;
+      remote.forEach(function(rn){
+        var local=(db.nageurs||[]).find(function(n){return n.nom.toLowerCase()===rn.nageur_nom.toLowerCase();});
+        if(!local){
+          db.nageurs.push({id:uid(),nom:rn.nageur_nom,performances:(rn.performances||[]).map(function(p){return Object.assign({},p,{id:uid(),_synced:true});})});
+          changed=true;
+        } else {
+          (rn.performances||[]).forEach(function(rp){
+            var exists=(local.performances||[]).find(function(lp){
+              return lp.date===rp.date&&lp.nage===rp.nage&&lp.distance===rp.distance&&lp.temps===rp.temps;
+            });
+            if(!exists){local.performances.push(Object.assign({},rp,{id:uid(),_synced:true}));changed=true;}
+          });
+        }
+      });
+      if(changed){localStorage.setItem(perfDBKey(),JSON.stringify(db));renderPerf();}
+    })
+    .catch(function(e){console.warn('[_mergePerfFromApi]',e);});
+}
 
 // ── Sync nageurs poids ↔ perf ──
 function syncNageurs(){
@@ -5848,7 +6068,48 @@ function saveLang(lang){
 // ── Clé de stockage ──
 function hrvKey(){return 'c66_hrv_'+(window._userKey||'default')}
 function loadHRVDB(){try{return JSON.parse(localStorage.getItem(hrvKey()))||{nageurs:[]}}catch(e){return{nageurs:[]}}}
-function saveHRVDB(db){if(window._visitorMode)return; localStorage.setItem(hrvKey(),JSON.stringify(db))}
+function saveHRVDB(db){
+  if(window._visitorMode)return;
+  var toSync=[];
+  if(typeof currentClub!=='undefined'&&currentClub&&typeof currentCoachId!=='undefined'&&currentCoachId){
+    db.nageurs.forEach(function(n){
+      (n.historique||[]).forEach(function(h){
+        if(!h._synced)toSync.push({nageur_nom:n.nom,date:h.date,note:h.note,fc:h.fc||null,rmssd:h.rmssd||null,commentaire:h.commentaire||'',source:h.source||'manual'});
+      });
+    });
+    db.nageurs.forEach(function(n){(n.historique||[]).forEach(function(h){h._synced=true;});});
+  }
+  localStorage.setItem(hrvKey(),JSON.stringify(db));
+  if(toSync.length){
+    fetch('/api/hrv',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,entries:toSync})})
+      .catch(function(e){console.warn('[saveHRVDB sync]',e.message);});
+  }
+}
+
+function _mergeHRVFromApi(){
+  if(typeof currentClub==='undefined'||!currentClub||typeof currentCoachId==='undefined'||!currentCoachId)return;
+  fetch('/api/hrv?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId))
+    .then(function(r){return r.ok?r.json():Promise.reject('status '+r.status);})
+    .then(function(remote){
+      if(!remote||!remote.length)return;
+      var db=loadHRVDB();
+      var changed=false;
+      remote.forEach(function(rn){
+        var local=db.nageurs.find(function(n){return n.nom.toLowerCase()===rn.nageur_nom.toLowerCase();});
+        if(!local){
+          db.nageurs.push({nom:rn.nageur_nom,historique:(rn.historique||[]).map(function(h){return Object.assign({},h,{_synced:true});})});
+          changed=true;
+        } else {
+          (rn.historique||[]).forEach(function(rh){
+            var exists=local.historique.find(function(lh){return lh.date===rh.date;});
+            if(!exists){local.historique.push(Object.assign({},rh,{_synced:true}));changed=true;}
+          });
+        }
+      });
+      if(changed){localStorage.setItem(hrvKey(),JSON.stringify(db));renderHRVListe();}
+    })
+    .catch(function(e){console.warn('[_mergeHRVFromApi]',e);});
+}
 
 // ── Helpers couleur/label score ──
 function hrvScoreColor(s){
@@ -6350,6 +6611,7 @@ async function hrvHandleRRFile(file){
       throw new Error(err.error||'Erreur serveur '+response.status);
     }
     const entry=await response.json();
+    entry._synced=true; // déjà inséré dans Supabase par POST /api/hrv
 
     if(nageur){
       nageur.historique.push(entry);

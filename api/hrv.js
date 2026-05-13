@@ -15,7 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -78,6 +78,65 @@ export default async function handler(req) {
   // Preflight CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS });
+  }
+
+  // ── GET ?clubId=&coachId= → historique groupé par nageur ──
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const clubId = url.searchParams.get('clubId');
+    const coachId = url.searchParams.get('coachId');
+    if (!clubId || !coachId) return json(null, 400, { error: 'clubId and coachId required' });
+
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const { data, error } = await supabase
+      .from('hrv')
+      .select('nageur_nom, date, note, fc, rmssd, commentaire, source')
+      .eq('club_id', clubId)
+      .eq('coach_id', coachId)
+      .order('date', { ascending: false });
+
+    if (error) return json(null, 500, { error: error.message });
+
+    const map = {};
+    (data || []).forEach((row) => {
+      if (!map[row.nageur_nom]) map[row.nageur_nom] = [];
+      map[row.nageur_nom].push({
+        date: row.date, note: row.note, fc: row.fc,
+        rmssd: row.rmssd, commentaire: row.commentaire, source: row.source,
+      });
+    });
+    const result = Object.entries(map).map(([nageur_nom, historique]) => ({ nageur_nom, historique }));
+    return json(null, 200, result);
+  }
+
+  // ── PUT { clubId, coachId, entries } → bulk insert entrées pré-calculées ──
+  if (req.method === 'PUT') {
+    let body;
+    try { body = await req.json(); } catch { return json(null, 400, { error: 'Invalid JSON' }); }
+    const { clubId, coachId, entries } = body;
+    if (!clubId || !coachId || !Array.isArray(entries) || !entries.length) {
+      return json(null, 400, { error: 'clubId, coachId, entries[] required' });
+    }
+
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const rows = entries.map((e) => ({
+      club_id: clubId,
+      coach_id: coachId,
+      nageur_nom: e.nageur_nom,
+      date: e.date,
+      note: e.note,
+      fc: e.fc || null,
+      rmssd: e.rmssd || null,
+      commentaire: e.commentaire || '',
+      source: e.source || 'manual',
+    }));
+
+    const { error } = await supabase.from('hrv').upsert(rows, { onConflict: 'club_id,coach_id,nageur_nom,date' });
+    if (error) {
+      console.error('[hrv PUT] supabase error', JSON.stringify(error));
+      return json(null, 500, { error: error.message });
+    }
+    return json(null, 200, { ok: true, count: rows.length });
   }
 
   if (req.method !== 'POST') {
