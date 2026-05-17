@@ -1022,25 +1022,6 @@ body.visitor-mode .visitor-banner{display:flex}
         </div>
       </div>
 
-      <!-- ACCORDÉON : SUIVI HRV -->
-      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
-        <div onclick="toggleSettingsSection('sec-hrv')" style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;background:var(--bg);user-select:none">
-          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.1rem">❤️</span><div><div style="font-size:.88rem;font-weight:600;color:var(--text)" data-i18n="settings.hrv">Suivi HRV</div><div style="font-size:.7rem;color:var(--muted);margin-top:1px" data-i18n="settings.hrv.sub">Résultats tableau photo</div></div></div>
-          <div style="display:flex;align-items:center;gap:10px"><div id="hrv-settings-badge" style="font-size:.65rem;font-weight:600;padding:2px 8px;border-radius:10px"></div><span id="sec-hrv-arrow" style="font-size:.75rem;color:var(--muted)">▼</span></div>
-        </div>
-        <div id="sec-hrv" style="display:none;padding:16px;border-top:1px solid var(--border);box-sizing:border-box;overflow:hidden;max-width:100%;margin:0">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;overflow:hidden;min-width:0">
-            <div style="flex:1;min-width:0;overflow:hidden">
-              <div style="font-size:.82rem;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" data-i18n="settings.hrv.on">Résultats tableau photo</div>
-              <div style="font-size:.7rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" data-i18n="settings.hrv.desc">Affiche la section analyse photo dans l'onglet HRV</div>
-            </div>
-            <div onclick="toggleHRVPhotoEnabled()" id="hrv-photo-toggle" style="width:42px;height:24px;background:#d1d5db;border-radius:12px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;margin-left:8px">
-              <div id="hrv-photo-toggle-thumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s"></div>
-            </div>
-          </div>
-          <div style="font-size:.72rem;color:var(--muted);line-height:1.5;background:var(--bg);border-radius:8px;padding:9px 12px;box-sizing:border-box;overflow:hidden;width:100%" data-i18n-html="settings.hrv.help"><b>ON</b> → section photo visible dans l'onglet HRV<br><b>OFF</b> → onglet HRV simplifié, uniquement les profils nageurs et l'import RR individuel</div>
-        </div>
-      </div>
 
       <!-- Séparateur GÉNÉRAL (cliquable) -->
       <div onclick="toggleGeneralSection()" id="general-section-header" style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;cursor:pointer;user-select:none;margin-top:8px">
@@ -1578,7 +1559,7 @@ function toggleGeneralSection(){
 }
 
 function toggleSettingsSection(id){
-  var allSections=['sec-int','sec-nage','sec-hrv','sec-app','sec-lang','sec-visitor'];
+  var allSections=['sec-int','sec-nage','sec-app','sec-lang','sec-visitor'];
   var el=document.getElementById(id);
   var isOpen=el&&el.style.display!=='none';
   allSections.forEach(function(sid){
@@ -5693,9 +5674,6 @@ var T = {
   // ── HRV ──
   'hrv.title':            { fr:'Suivi',               en:'HRV',                es:'Seguimiento' },
   'hrv.sub':              { fr:'HRV',                 en:'Tracking',           es:'HRV' },
-  'hrv.photo':            { fr:'Analyse groupe — Photo', en:'Group analysis — Photo', es:'Análisis grupal — Foto' },
-  'hrv.photo.drop':       { fr:'Glisse ou clique',    en:'Drop or click',      es:'Arrastra o haz clic' },
-  'hrv.photo.import':     { fr:'pour importer une photo du tableau HRV', en:'to import a photo of the HRV table', es:'para importar una foto de la tabla HRV' },
   'hrv.swimmers':         { fr:'Nageurs',             en:'Swimmers',           es:'Nadadores' },
   'hrv.add':              { fr:'+ Ajouter',           en:'+ Add',              es:'+ Añadir' },
   'hrv.none':             { fr:'Aucun nageur',        en:'No swimmers',        es:'Ningún nadador' },
@@ -5743,9 +5721,6 @@ var T = {
   'settings.nage.sub':    { fr:'Crawl, Dos, Brasse, Papillon…', en:'Freestyle, Back, Breast, Fly…', es:'Crol, Espalda, Braza, Mariposa…' },
   'settings.nage.on':     { fr:'Activer le suivi par nage', en:'Enable stroke tracking', es:'Activar seguimiento por estilo' },
   'settings.hrv':         { fr:'Suivi HRV',           en:'HRV Tracking',       es:'Seguimiento HRV' },
-  'settings.hrv.sub':     { fr:'Résultats tableau photo', en:'Photo table results', es:'Resultados tabla foto' },
-  'settings.hrv.on':      { fr:'Résultats tableau photo', en:'Photo table results', es:'Resultados tabla foto' },
-  'settings.hrv.desc':    { fr:"Affiche la section analyse photo dans l'onglet HRV", en:'Show photo analysis section in HRV tab', es:'Mostrar sección de análisis de fotos en la pestaña HRV' },
   'settings.lang':        { fr:'Langue',              en:'Language',            es:'Idioma' },
   'settings.lang.sub':    { fr:'Français, English, Español', en:'French, English, Spanish', es:'Francés, Inglés, Español' },
   'settings.save':        { fr:'Enregistrer',         en:'Save',               es:'Guardar' },
@@ -5962,7 +5937,6 @@ var T = {
   'hrv.del.msg':          { fr:'Supprimer le profil HRV de <b>{name}</b> et tout son historique ?', en:'Delete HRV profile of <b>{name}</b> and all their history?', es:'¿Eliminar el perfil HRV de <b>{name}</b> y todo su historial?' },
   'hrv.profile.deleted':  { fr:'Profil supprimé.', en:'Profile deleted.', es:'Perfil eliminado.' },
   'hrv.not.image':        { fr:"Ce fichier n'est pas une image.", en:'This file is not an image.', es:'Este archivo no es una imagen.' },
-  'hrv.photo.loading':    { fr:'⏳ Analyse Claude en cours…', en:'⏳ Claude analysis in progress…', es:'⏳ Análisis Claude en curso…' },
   'hrv.rr.loading':       { fr:'⏳ Calcul RMSSD en cours…', en:'⏳ Calculating RMSSD…', es:'⏳ Calculando RMSSD…' },
   'hrv.rr.insufficient':  { fr:'⚠️ Fichier insuffisant — besoin de 50+ intervalles RR valides (300–2000 ms).', en:'⚠️ Insufficient file — need 50+ valid RR intervals (300–2000 ms).', es:'⚠️ Archivo insuficiente — se necesitan 50+ intervalos RR válidos (300–2000 ms).' },
   'hrv.analysis.error':   { fr:"⚠️ Erreur d'analyse : ", en:'⚠️ Analysis error: ', es:'⚠️ Error de análisis: ' },
@@ -5978,8 +5952,6 @@ var T = {
   'hrv.log.new':          { fr:'nouveau profil créé', en:'new profile created', es:'nuevo perfil creado' },
   'hrv.measures':         { fr:'mesure(s) · dernière : ', en:'measurement(s) · last: ', es:'medida(s) · última: ' },
   'hrv.no.measure.inline':{ fr:'Aucune mesure', en:'No measurements', es:'Sin medidas' },
-  'hrv.analyse.reanalyse':{ fr:'✅ Analyse importée — clique pour ré-analyser', en:'✅ Analysis imported — click to re-analyze', es:'✅ Análisis importado — haz clic para re-analizar' },
-  'hrv.photo.hint':       { fr:'PNG, JPG — résultats de tout le groupe', en:'PNG, JPG — results for the whole group', es:'PNG, JPG — resultados de todo el grupo' },
   'hrv.period':           { fr:'Période : ', en:'Period: ', es:'Período: ' },
 
   // ── NOUVELLES CLÉS COMMUNES ──
@@ -6019,7 +5991,6 @@ var T = {
   'plan.mc.prefix':       { fr:'MC N°', en:'Cycle #', es:'MC N°' },
   'settings.int.help':    { fr:'Personnalise les noms affichés. La détection auto dans la grille utilisera tes noms.', en:'Customize the displayed names. Auto-detection in the grid will use your names.', es:'Personaliza los nombres mostrados. La detección automática usará tus nombres.' },
   'settings.nage.help':   { fr:"Quand c'est activé, la nage est détectée automatiquement dans la description. Si pas précisé → Crawl par défaut.", en:'When enabled, stroke is auto-detected in the description. If not specified → Freestyle by default.', es:'Cuando está activado, el estilo se detecta automáticamente en la descripción. Si no se especifica → Crol por defecto.' },
-  'settings.hrv.help':    { fr:"<b>ON</b> → section photo visible dans l'onglet HRV<br><b>OFF</b> → onglet HRV simplifié, uniquement les profils nageurs et l'import RR individuel", en:'<b>ON</b> → photo section visible in HRV tab<br><b>OFF</b> → simplified HRV tab, only swimmer profiles and individual RR import', es:'<b>ON</b> → sección foto visible en la pestaña HRV<br><b>OFF</b> → pestaña HRV simplificada, solo perfiles y importación RR individual' },
   'sess.dist.title':      { fr:'Calculé auto depuis description. Modifiable.', en:'Auto-calculated from description. Editable.', es:'Calculado automáticamente desde la descripción. Editable.' },
   'coach.firstname':      { fr:'Prénom',              en:'First name',         es:'Nombre' },
   'coach.lastname':       { fr:'Nom',                 en:'Last name',          es:'Apellido' },
@@ -6050,17 +6021,11 @@ function loadLang(){
   try{
     var saved = localStorage.getItem(langKey());
     if(saved && LANGS[saved]) _lang = saved;
-    else {
-      // Essai langue globale
-      var global = localStorage.getItem('c66_lang');
-      if(global && LANGS[global]) _lang = global;
-    }
   }catch(e){}
 }
 function saveLang(lang){
   _lang = lang;
   localStorage.setItem(langKey(), lang);
-  localStorage.setItem('c66_lang', lang);
 }
 
 
@@ -6166,9 +6131,6 @@ function hrvBarHTML(score){
 // ── State UI ──
 let _hrvNageurActif=null; // nom du nageur actif ou null (vue liste)
 let _hrvHistOpen={};      // {nom_i: true} entrée détail ouverte
-let _hrvPhotoResults=null;
-let _hrvPhotoLog=[];
-
 // ── Render principal ──
 function renderHRV(){
   const panel=document.getElementById('panel-hrv');
@@ -6197,30 +6159,6 @@ function renderHRVListe(){
     <div class="page-title">${t('hrv.title')} <span>${t('hrv.sub')}</span></div>
   </div>
 
-  ${(!_v && _hrvPhotoEnabled) ? `
-  <!-- SECTION PHOTO GROUPE -->
-  <div class="hrv-card" style="margin-bottom:18px">
-    <div class="sec-title" style="margin-bottom:10px">${t('hrv.photo')}</div>
-    <div class="hrv-upload-zone" id="hrv-photo-zone"
-        onclick="document.getElementById('hrv-photo-input').click()"
-        ondragover="event.preventDefault();this.classList.add('drag')"
-        ondragleave="this.classList.remove('drag')"
-        ondrop="event.preventDefault();this.classList.remove('drag');hrvHandlePhotoFile(event.dataTransfer.files[0])">
-      ${_hrvPhotoResults?
-        '<div style=\'font-size:.8rem;color:var(--blue2);font-weight:600;margin-bottom:4px\'>' + t('hrv.analyse.reanalyse') + '</div>':
-        '<div class=\'hrv-upload-icon\'>📷</div><div class=\'hrv-upload-text\'><b>' + t('hrv.photo.drop') + '</b> ' + t('hrv.photo.import') + '</div><div style=\'font-size:.7rem;color:var(--muted);margin-top:4px\'>' + t('hrv.photo.hint') + '</div>'}
-    </div>
-    <input type="file" id="hrv-photo-input" accept="image/*" style="display:none"
-      onchange="if(this.files[0])hrvHandlePhotoFile(this.files[0])">
-    <div id="hrv-photo-loading"></div>
-    <div id="hrv-photo-error"></div>
-    ${_hrvPhotoLog.map(l=>'<div class=\'hrv-success-log\'><span>✓</span><span><b>' + l.nom + '</b> — ' + l.action + '</span></div>').join('')}
-    <div id="hrv-photo-results">
-      ${_hrvPhotoResults?hrvPhotoResultsHTML(_hrvPhotoResults):''}
-    </div>
-  </div>
-  <div style="height:1px;background:var(--border);margin-bottom:18px"></div>
-  ` : ''}
 
   <!-- LISTE NAGEURS -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -6265,27 +6203,6 @@ function renderHRVListe(){
   </div>`;
 
   panel.innerHTML=html;
-}
-
-function hrvPhotoResultsHTML(data){
-  if(!data||!data.nageurs)return'';
-  let html=`<div style="margin-top:14px">`;
-  if(data.date_analyse) html+=`<div style="font-size:.7rem;color:var(--muted);margin-bottom:10px">${t('hrv.period')}${data.date_analyse}</div>`;
-  html+=`<div style="display:flex;flex-direction:column;gap:10px">`;
-  data.nageurs.forEach(n=>{
-    const color=hrvScoreColor(n.note);
-    html+=`<div class="hrv-group-result" style="border-color:${n.note!=null?color+'33':'var(--border)'}">
-      <div class="hrv-gauge-wrap" style="width:72px;height:72px">${hrvGaugeSVG(n.note,72)}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:.9rem;margin-bottom:5px">${n.nom}</div>
-        ${hrvBarHTML(n.note)}
-        ${n.note!=null?`<div class="hrv-tag" style="background:${color}22;color:${color};margin-top:6px">${hrvScoreLabel(n.note)}</div>`:''}
-        ${n.commentaire?`<div style="font-size:.75rem;color:var(--muted);margin-top:7px;line-height:1.5;border-left:2px solid ${color};padding-left:9px">${n.commentaire}</div>`:''}
-      </div>
-    </div>`;
-  });
-  html+=`</div></div>`;
-  return html;
 }
 
 // ── VUE PROFIL NAGEUR ──
@@ -6474,96 +6391,6 @@ function promptLang(){
 }
 
 // ── ANALYSE PHOTO GROUPE (API Claude) ──
-function hrvHandlePhotoFile(file){
-  if(!file||!file.type.startsWith('image/')){showToast(t('hrv.not.image'));return;}
-  const zone=document.getElementById('hrv-photo-zone');
-  const loadEl=document.getElementById('hrv-photo-loading');
-  const errEl=document.getElementById('hrv-photo-error');
-  const resEl=document.getElementById('hrv-photo-results');
-  if(loadEl)loadEl.innerHTML='<div class="hrv-loading">'+t('hrv.photo.loading')+'</div>';
-  if(errEl)errEl.innerHTML='';
-  if(resEl)resEl.innerHTML='';
-  _hrvPhotoResults=null;
-  _hrvPhotoLog=[];
-
-  const reader=new FileReader();
-  reader.onload=async function(e){
-    const b64=e.target.result.split(',')[1];
-    const mediaType=file.type||'image/png';
-    try{
-      const response=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          model:'claude-sonnet-4-20250514',
-          max_tokens:1200,
-          messages:[{
-            role:'user',
-            content:[
-              {type:'image',source:{type:'base64',media_type:mediaType,data:b64}},
-              {type:'text',text:`Tu es un analyste HRV expert en natation de haut niveau.
-Analyse ce tableau HRV. Colonnes par nageur :
-FC c = fréquence cardiaque couchée (bpm) → basse = meilleur
-Rés. = réserve HRV (%) → haute = meilleur
-Régé. = régénération HRV (%) → haute = meilleur
-FC d = fréquence cardiaque debout (bpm)
-Eff. = efficacité / capacité à s'entraîner (%) → haute = meilleur
-
-Ignore #DIV/0!, vides, 0 isolés. Calcule la moyenne des jours valides.
-Note /10 basée sur seuils physiologiques ABSOLUS (chaque nageur noté indépendamment) :
-FC c : <50→10 | 50-55→8.5 | 55-60→7 | 60-65→5.5 | 65-70→4 | >70→2.5
-Rés./Régé./Eff. : >200→10 | >150→8.5 | >100→7 | >60→5.5 | >30→4 | <30→2.5
-Score = moyenne des sous-scores disponibles.
-Commentaire court (1-2 phrases, style coach, orienté performance).
-${promptLang()}
-
-JSON UNIQUEMENT (pas de markdown, pas de backticks) :
-{"date_analyse":"période visible","nageurs":[{"nom":"Prénom","jours_valides":2,"donnees":{"fc_couchee":51.9,"reserve":338,"regeneration":337,"fc_debout":73,"efficacite":241},"note":8.54,"commentaire":"Texte."}]}`}
-            ]
-          }]
-        })
-      });
-      const data=await response.json();
-      let raw=(data.content||[]).find(b=>b.type==='text')?.text||'';
-      // Nettoie les backticks
-      raw=raw.replace(/```json|```/g,'').trim();
-      const parsed=JSON.parse(raw);
-      _hrvPhotoResults=parsed;
-
-      // Alimente auto l'historique
-      const db=loadHRVDB();
-      const today_=today();
-      _hrvPhotoLog=[];
-      (parsed.nageurs||[]).forEach(function(n){
-        if(n.note==null)return;
-        const entry={
-          date:today_,
-          note:n.note,
-          commentaire:n.commentaire||'',
-          source:'photo',
-          donnees:n.donnees||{},
-          jours_valides:n.jours_valides||null,
-          fc:n.donnees?.fc_couchee||null,
-        };
-        const existe=db.nageurs.find(ng=>ng.nom.toLowerCase()===n.nom.toLowerCase());
-        if(existe){
-          existe.historique.push(entry);
-          _hrvPhotoLog.push({nom:existe.nom,action:t('hrv.log.added')});
-        } else {
-          db.nageurs.push({nom:n.nom,historique:[entry]});
-          _hrvPhotoLog.push({nom:n.nom,action:t('hrv.log.new')});
-        }
-      });
-      saveHRVDB(db);
-      renderHRV();
-    }catch(err){
-      if(loadEl)loadEl.innerHTML='';
-      if(errEl)errEl.innerHTML='<div class="hrv-error">'+t('hrv.analysis.error')+err.message+'</div>';
-    }
-  };
-  reader.readAsDataURL(file);
-}
-
 // ── ANALYSE FICHIER RR INDIVIDUEL ──
 async function hrvHandleRRFile(file){
   const loadEl=document.getElementById('hrv-rr-loading');
@@ -6631,18 +6458,6 @@ async function hrvHandleRRFile(file){
 }
 
 
-// ── HRV PHOTO SETTING ──
-function hrvPhotoKey(){return 'c66_hrv_photo_enabled_'+(window._userKey||'default')}
-function loadHRVPhotoEnabled(){try{return localStorage.getItem(hrvPhotoKey())!=='0';}catch(e){return true;}}
-function saveHRVPhotoEnabled(val){localStorage.setItem(hrvPhotoKey(),val?'1':'0');}
-var _hrvPhotoEnabled=true;
-function toggleHRVPhotoEnabled(){_hrvPhotoEnabled=!_hrvPhotoEnabled;saveHRVPhotoEnabled(_hrvPhotoEnabled);updateHRVPhotoToggleUI();if(document.getElementById('panel-hrv').classList.contains('show'))renderHRV();}
-function updateHRVPhotoToggleUI(){
-  var tog=document.getElementById('hrv-photo-toggle'),thumb=document.getElementById('hrv-photo-toggle-thumb'),badge=document.getElementById('hrv-settings-badge');
-  if(tog)tog.style.background=_hrvPhotoEnabled?'var(--blue2)':'#d1d5db';
-  if(thumb)thumb.style.left=_hrvPhotoEnabled?'21px':'3px';
-  if(badge){badge.textContent=_hrvPhotoEnabled?'ON':'OFF';badge.style.background=_hrvPhotoEnabled?'rgba(34,197,94,.15)':'rgba(0,0,0,.06)';badge.style.color=_hrvPhotoEnabled?'#16a34a':'var(--muted)';}
-}
 
 // ── DUPLIQUER SÉANCE ──
 function dupliquerSeance(id){
@@ -6957,12 +6772,10 @@ function applyLangEverywhere(){
   }
 }
 
-// Override openIntSettings pour charger langue + HRV toggle
+// Override openIntSettings pour charger langue
 var _origOpenIntSettings2=openIntSettings;
 openIntSettings=function(){
   _origOpenIntSettings2();
-  _hrvPhotoEnabled=loadHRVPhotoEnabled();
-  updateHRVPhotoToggleUI();
   _pendingLang=null;
   updateSettingsLangUI();
 };
