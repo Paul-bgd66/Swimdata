@@ -3588,20 +3588,24 @@ function handleVideoUpload(swimmerId, input){
     const swimmerPrenom=sw0?sw0.prenom:'';
     const swimmerNom=sw0?sw0.nom:'';
     showToast(t('video.loading'));
-    fetch('/api/videos-upload?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId)+'&videoId='+encodeURIComponent(videoId)+'&ext='+encodeURIComponent(ext),{
-      method:'POST',headers:{'Content-Type':file.type},body:file,
-    })
-    .then(function(r){return r.ok?r.json():r.json().then(function(e){throw new Error(e.error||'Upload échoué');});})
+    // Étape 1 : obtenir la signed upload URL
+    fetch('/api/videos-upload?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId)+'&videoId='+encodeURIComponent(videoId)+'&ext='+encodeURIComponent(ext))
+    .then(function(r){return r.ok?r.json():r.json().then(function(e){throw new Error(e.error||'Signed URL échouée');});})
+    // Étape 2 : upload direct client → Supabase Storage
     .then(function(uploadData){
+      return fetch(uploadData.signedUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file})
+        .then(function(r){if(!r.ok)throw new Error('Upload Storage échoué ('+r.status+')');return uploadData.storagePath;});
+    })
+    // Étape 3 : POST métadonnées
+    .then(function(storagePath){
       return fetch('/api/videos',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,swimmerId:swimmerId,swimmerPrenom:swimmerPrenom,swimmerNom:swimmerNom,videoId:videoId,name:videoName,date:videoDate,type:file.type,notes:'',storagePath:uploadData.storagePath,annotations:[]}),
-      });
+        body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,swimmerId:swimmerId,swimmerPrenom:swimmerPrenom,swimmerNom:swimmerNom,videoId:videoId,name:videoName,date:videoDate,type:file.type,notes:'',storagePath:storagePath,annotations:[]}),
+      }).then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.error||'Sauvegarde métadonnées échouée');});return {storagePath};});
     })
-    .then(function(r){return r.ok?r.json():r.json().then(function(e){throw new Error(e.error||'Sauvegarde métadonnées échouée');});})
     .then(function(d){
       const db=loadVDB();const sw=db.swimmers.find(function(s){return s.id===swimmerId;});if(!sw)return;
-      sw.videos.push({id:videoId,name:videoName,date:videoDate,type:file.type,storage_path:d.storagePath||currentClub.id+'/'+currentCoachId+'/'+videoId+'.'+ext,notes:'',annotations:[]});
+      sw.videos.push({id:videoId,name:videoName,date:videoDate,type:file.type,storage_path:d.storagePath,notes:'',annotations:[]});
       saveVDB(db);activeVideoId=videoId;showToast(t('toast.video.added'));renderVideo();
       setTimeout(function(){const el=document.getElementById('vidcard-'+videoId);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},200);
     })

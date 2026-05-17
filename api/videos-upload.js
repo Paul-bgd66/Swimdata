@@ -1,19 +1,13 @@
 // /api/videos-upload.js
-// POST (raw binary body) ?clubId=&coachId=&videoId=&ext=
-// Headers: Content-Type: video/mp4 (ou autre MIME)
-// Body: fichier binaire brut
-// Retourne: { storagePath }
-//
-// Note: limite Vercel Serverless = 4.5 MB. Pour des fichiers plus grands,
-// utiliser un upload direct depuis le client vers Supabase Storage avec une signed upload URL.
-
-export const config = { runtime: 'nodejs', maxDuration: 60 };
+// GET ?clubId=&coachId=&videoId=&ext=&contentType=
+// Génère une signed upload URL Supabase Storage → { signedUrl, storagePath }
+// Le client uploade ensuite directement vers Supabase (PUT signedUrl, body: file)
 
 import { createClient } from '@supabase/supabase-js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -26,7 +20,7 @@ function json(res, status, body) {
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-  if (req.method !== 'POST') return json(null, 405, { error: 'Method not allowed' });
+  if (req.method !== 'GET') return json(null, 405, { error: 'Method not allowed' });
 
   const url = new URL(req.url);
   const clubId = url.searchParams.get('clubId');
@@ -38,32 +32,20 @@ export default async function handler(req) {
     return json(null, 400, { error: 'clubId, coachId, videoId required' });
   }
 
-  const contentType = req.headers.get('content-type') || 'video/mp4';
-
-  let arrayBuffer;
-  try {
-    arrayBuffer = await req.arrayBuffer();
-  } catch (err) {
-    return json(null, 400, { error: 'Lecture du body impossible : ' + err.message });
-  }
-
-  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-    return json(null, 400, { error: 'Body vide' });
-  }
-
-  const storagePath = `${clubId}/${coachId}/${videoId}.${ext}`;
-  const buffer = new Uint8Array(arrayBuffer);
+  const storagePath = `${clubId}/${coachId}/${videoId}.${ext}`
+    .replace(/[^a-zA-Z0-9/_.-]/g, '_');
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-  const { error } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from('videos')
-    .upload(storagePath, buffer, { contentType, upsert: true });
+    .createSignedUploadUrl(storagePath);
 
   if (error) {
-    console.error('[videos-upload] storage error', JSON.stringify(error));
+    console.error('[videos-upload] createSignedUploadUrl error', JSON.stringify(error));
     return json(null, 500, { error: error.message });
   }
 
-  console.log('[videos-upload] uploaded', storagePath, buffer.byteLength, 'bytes');
-  return json(null, 200, { storagePath });
+  return json(null, 200, { signedUrl: data.signedUrl, storagePath });
 }
+
+export const config = { runtime: 'edge' };
