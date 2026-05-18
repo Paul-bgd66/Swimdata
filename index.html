@@ -4960,6 +4960,49 @@ function launchApp(coach){
   _mergeVideosFromApi();
 }
 
+// ── FORCE SYNC ALL → SUPABASE ──
+function _forceSyncAll(){
+  if(!currentClub||!currentCoachId){showToast('Non connecté — impossible de synchroniser');return;}
+  if(window._visitorMode){showToast('Mode visiteur — sync désactivée');return;}
+  showToast('Sync Supabase en cours...');
+
+  // Séances : POST chaque session (fire-and-forget)
+  var _dbRaw=null;
+  try{_dbRaw=JSON.parse(localStorage.getItem(window._userKey)||'null');}catch(e){}
+  var _sessions=(_dbRaw&&_dbRaw.sessions)||[];
+  _sessions.forEach(function(s){
+    fetch('/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,session:s})
+    }).catch(function(e){console.warn('[_forceSyncAll sessions]',e.message);});
+  });
+
+  // HRV : marque tout non-synced → saveHRVDB envoie le PUT
+  var _hrv=loadHRVDB();
+  _hrv.nageurs.forEach(function(n){(n.historique||[]).forEach(function(h){h._synced=false;});});
+  saveHRVDB(_hrv);
+
+  // Poids : même logique via _poidsDB
+  var _pw=pDB();
+  (_pw.swimmers||[]).forEach(function(sw){(sw.entries||[]).forEach(function(e){e._synced=false;});});
+  pSave();
+
+  // Performances
+  var _perf=loadPerfDB();
+  (_perf.nageurs||[]).forEach(function(n){(n.performances||[]).forEach(function(p){p._synced=false;});});
+  savePerfDB(_perf);
+
+  // Planning (upsert direct, pas de flag)
+  savePlan(loadPlan());
+
+  // Groupes
+  saveGroups(loadGroups());
+
+  // Vidéos : ignorées (base64 non migrables automatiquement)
+
+  setTimeout(function(){showToast('Sync terminée ✅');},3000);
+}
+window._forceSyncAll=_forceSyncAll;
+
 // ── PARAMÈTRES COACH — PIN ──
 function openCoachSettings(){
   closeLogoutMenu();
