@@ -69,7 +69,7 @@ export default async function handler(req) {
     };
     console.log('[sessions POST] inserting', JSON.stringify(row));
 
-    const { data, error } = await supabase().from('sessions').insert(row).select().single();
+    const { data, error } = await supabase().from('sessions').upsert(row, { onConflict: 'id' }).select().single();
 
     if (error) {
       console.error('[sessions POST] supabase error', JSON.stringify(error));
