@@ -124,12 +124,11 @@ export default async function handler(req) {
       coach_id: coachId,
       nageur_nom: e.nageur_nom,
       date: e.date,
-      note: e.note,
+      note: e.note ?? null,
       fc: e.fc || null,
       rmssd: e.rmssd || null,
       commentaire: e.commentaire || '',
       source: e.source || 'manual',
-      // pas d'id : colonne GENERATED ALWAYS AS IDENTITY
     }));
 
     const { error } = await supabase.from('hrv').upsert(rows, { onConflict: 'club_id,coach_id,nageur_nom,date' });
