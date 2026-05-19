@@ -714,8 +714,8 @@ body.visitor-mode .visitor-banner{display:flex}
       <!-- Navigation nageurs -->
       <div id="poids-nav" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:16px;-webkit-overflow-scrolling:touch"></div>
 
-      <!-- Bouton ajouter nageur -->
-      <div id="poids-add-bar" style="margin-bottom:16px">
+      <!-- Bouton ajouter nageur — masqué (géré dans "Gérer mes nageurs") -->
+      <div id="poids-add-bar" style="display:none;margin-bottom:16px">
         <button class="btn btn-y" onclick="poidsShowAdd()" id="poids-add-btn">+ Ajouter un nageur</button>
       </div>
 
@@ -785,7 +785,7 @@ body.visitor-mode .visitor-banner{display:flex}
     <div class="panel" id="panel-perf">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div class="page-title" style="margin-bottom:0"><span id="perf-title-lbl">Performances</span></div>
-        <button class="btn btn-y btn-sm visitor-hide" onclick="openAddPerfNageur()" id="perf-add-nageur-btn">+ Nageur</button>
+        <button class="btn btn-y btn-sm visitor-hide" onclick="openAddPerfNageur()" id="perf-add-nageur-btn" style="display:none">+ Nageur</button>
       </div>
       <div id="perf-content"></div>
     </div>
@@ -796,7 +796,7 @@ body.visitor-mode .visitor-banner{display:flex}
       <div class="vid-layout">
         <!-- Colonne gauche -->
         <div class="vid-sidebar">
-          <div class="vid-add-box visitor-hide">
+          <div class="vid-add-box visitor-hide" style="display:none">
             <div style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:9px" data-i18n="video.new">Nouveau nageur</div>
             <input id="vp-prenom" placeholder="Prénom" class="mi" style="width:100%;margin-bottom:7px"
               onkeydown="if(event.key==='Enter')document.getElementById('vp-nom').focus()">
@@ -6249,17 +6249,7 @@ function renderHRVListe(){
   <!-- LISTE NAGEURS -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
     <div class="sec-title" style="margin-bottom:0">${t('hrv.swimmers')}</div>
-    ${_v?'':
-    `<button class="btn btn-y btn-sm" onclick="hrvToggleAddBar()">${t('hrv.add')}</button>`}
   </div>
-
-  ${_v?'':
-  `<div class="hrv-add-bar" id="hrv-add-bar" style="display:none">
-    <input id="hrv-add-input" placeholder="${t('hrv.add.ph')}"
-      onkeydown="if(event.key==='Enter')hrvConfirmAdd()">
-    <button class="btn btn-y btn-sm" onclick="hrvConfirmAdd()">✓</button>
-    <button class="btn btn-g btn-sm" onclick="hrvToggleAddBar()">✕</button>
-  </div>`}
 
   <div id="hrv-nageur-list">
     ${db.nageurs.length===0?
@@ -6998,6 +6988,7 @@ function renderNageurManage(){
         +swimmerAvatarHTML(sw,40)
         +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:.92rem">'+sw.firstName+' '+sw.lastName+'</div>'
         +(sw.email?'<div style="font-size:.78rem;color:var(--muted)">'+sw.email+'</div>':'')+'</div>'
+        +'<button onclick="openEditSwimmerModal(\''+sw.id+'\')" style="background:none;border:none;color:var(--blue2,#2176e8);cursor:pointer;font-size:1rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">✏️</button>'
         +'<button onclick="confirmDeleteSwimmerV2(\''+sw.id+'\')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1.1rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">🗑</button>'
         +'</div>';
     });
@@ -7032,6 +7023,31 @@ function addSwimmer(data){
   var arr=getSwimmers();
   var sw={id:uid(),firstName:data.firstName||'',lastName:data.lastName||'',email:data.email||'',photo:data.photo||null,createdAt:new Date().toISOString()};
   arr.push(sw);localStorage.setItem(swimmersKey(),JSON.stringify(arr));return sw;
+}
+function updateSwimmer(swimmerId, data){
+  var arr=getSwimmers();
+  var idx=arr.findIndex(function(s){return s.id===swimmerId;});
+  if(idx<0)return;
+  if(data.firstName)arr[idx].firstName=data.firstName;
+  if(data.lastName!==undefined)arr[idx].lastName=data.lastName;
+  localStorage.setItem(swimmersKey(),JSON.stringify(arr));
+}
+function openEditSwimmerModal(swimmerId){
+  var sw=getSwimmers().find(function(s){return s.id===swimmerId;});if(!sw)return;
+  var ep=document.getElementById('esw-prenom');var en=document.getElementById('esw-nom');
+  if(ep)ep.value=sw.firstName;if(en)en.value=sw.lastName;
+  document.getElementById('esw-submit-btn').onclick=function(){submitEditSwimmer(swimmerId);};
+  document.getElementById('modal-edit-swimmer').style.display='flex';
+  setTimeout(function(){if(ep)ep.focus();},150);
+}
+function submitEditSwimmer(swimmerId){
+  var prenom=(document.getElementById('esw-prenom').value||'').trim();
+  var nom=(document.getElementById('esw-nom').value||'').trim();
+  if(!prenom||!nom){showToast('Prénom et nom obligatoires');return;}
+  updateSwimmer(swimmerId,{firstName:prenom,lastName:nom});
+  document.getElementById('modal-edit-swimmer').style.display='none';
+  showToast('Nageur mis à jour');
+  renderNageurManage();
 }
 function deleteSwimmer(swimmerId){
   var arr=getSwimmers().filter(function(s){return s.id!==swimmerId;});
@@ -7290,6 +7306,24 @@ function toggleSwAccordion(id){var el=document.getElementById(id);if(el)el.style
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button onclick="document.getElementById('modal-add-swimmer').style.display='none'" style="padding:9px 18px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;background:none;cursor:pointer;font-size:.9rem;min-height:44px">Annuler</button>
       <button onclick="submitAddSwimmer()" style="padding:9px 18px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600;min-height:44px">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ÉDITION NAGEUR ══ -->
+<div id="modal-edit-swimmer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:14px;padding:24px;width:min(92vw,400px)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <b style="font-size:1.05rem">Modifier le nageur</b>
+      <button onclick="document.getElementById('modal-edit-swimmer').style.display='none'" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);min-width:44px;min-height:44px">✕</button>
+    </div>
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Prénom *</label>
+    <input id="esw-prenom" placeholder="Prénom" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:12px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Nom *</label>
+    <input id="esw-nom" placeholder="Nom" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:20px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="document.getElementById('modal-edit-swimmer').style.display='none'" style="padding:9px 18px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;background:none;cursor:pointer;font-size:.9rem;min-height:44px">Annuler</button>
+      <button id="esw-submit-btn" style="padding:9px 18px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600;min-height:44px">Enregistrer</button>
     </div>
   </div>
 </div>
