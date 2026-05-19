@@ -564,7 +564,7 @@ body.visitor-mode .visitor-banner{display:flex}
         <div class="sb-item" id="snav-hist" onclick="showPanel('hist')">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span><span id="snav-hist-lbl">Historique</span>
         </div>
-        <div class="sb-item" id="snav-poids" onclick="showPanel('poids')">
+        <div class="sb-item" id="snav-poids" onclick="showPanel('poids')" style="display:none">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span id="snav-poids-lbl">Suivi poids</span>
         </div>
         <div class="sb-item" id="snav-perf" onclick="showPanel('perf')">
@@ -574,8 +574,11 @@ body.visitor-mode .visitor-banner{display:flex}
         <div class="sb-item" id="snav-video" onclick="showPanel('video')">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23,7 16,12 23,17"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></span><span id="snav-video-lbl">Analyse vidéo</span>
         </div>
-                <div class="sb-item" id="snav-hrv" onclick="showPanel('hrv')">
+                <div class="sb-item" id="snav-hrv" onclick="showPanel('hrv')" style="display:none">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span id="snav-hrv-lbl">Suivi HRV</span>
+        </div>
+        <div class="sb-item" id="snav-swimmers" onclick="showPanel('swimmers')">
+          <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span id="snav-swimmers-lbl">Mes nageurs</span>
         </div>
 <div class="sb-item" id="snav-planning" onclick="showPanel('planning')">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span id="snav-planning-lbl">Planning prévisionnel</span>
@@ -799,6 +802,19 @@ body.visitor-mode .visitor-banner{display:flex}
     
 <!-- SUIVI HRV -->
 <div class="panel" id="panel-hrv"></div>
+
+<!-- MES NAGEURS -->
+<div class="panel" id="panel-swimmers">
+  <div class="page-title">Mes nageurs</div>
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border,#e5e7eb);margin-bottom:16px;margin-top:8px">
+    <button id="stab-forme"  onclick="showSwimmerTab('forme')"  style="flex:1;padding:10px 4px;border:none;background:none;font-size:.88rem;font-weight:600;border-bottom:3px solid var(--blue2,#2176e8);color:var(--blue2,#2176e8);cursor:pointer">Forme</button>
+    <button id="stab-perfs"  onclick="showSwimmerTab('perfs')"  style="flex:1;padding:10px 4px;border:none;background:none;font-size:.88rem;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent">Perfs &amp; Vidéo</button>
+    <button id="stab-manage" onclick="showSwimmerTab('manage')" style="flex:1;padding:10px 4px;border:none;background:none;font-size:.88rem;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent">Gérer nageurs</button>
+  </div>
+  <div id="panel-swimmers-forme"></div>
+  <div id="panel-swimmers-perfs"  style="display:none"></div>
+  <div id="panel-swimmers-manage" style="display:none"></div>
+</div>
 
 <!-- PLANNING PRÉVISIONNEL -->
     <div class="panel" id="panel-planning">
@@ -2388,6 +2404,7 @@ function showPanel(name){
   if(name==='hrv')renderHRV();
   if(name==='planning')renderPlanning();
   if(name==='perf')renderPerf();
+  if(name==='swimmers')showSwimmerTab('forme');
   // Ferme la sidebar après navigation
   if(sbOpen){ sbOpen=false; document.getElementById('sidebar').classList.add('collapsed'); document.getElementById('menu-btn').classList.remove('open'); }
 }
@@ -2417,7 +2434,7 @@ function renderSB(){
       <span class="sb-int-km" style="color:${ICOLORS[k]}">${fkms(wi[k])}</span>
     </div>`).join('');
   // Visibilité des onglets selon mode visiteur
-  var _navKeys={dash:'snav-dash',hist:'snav-hist',poids:'snav-poids',perf:'snav-perf',video:'snav-video',hrv:'snav-hrv',planning:'snav-planning'};
+  var _navKeys={dash:'snav-dash',hist:'snav-hist',perf:'snav-perf',video:'snav-video',planning:'snav-planning',swimmers:'snav-swimmers'};
   var _vt=window._visitorMode?getVisitorSettings().tabs:null;
   Object.keys(_navKeys).forEach(function(key){
     var el=document.getElementById(_navKeys[key]);
@@ -6903,11 +6920,291 @@ if(session){
   loadCanet66();
   showScreen('screen-splash');
 }
+// ════════════════════════════════
+// MES NAGEURS
+// ════════════════════════════════
+
+// ── CRUD ──
+function swimmersKey(){return 'swimmers_'+(currentCoachId||'default');}
+function getSwimmers(){
+  try{return JSON.parse(localStorage.getItem(swimmersKey()))||[];}catch(e){return[];}
+}
+function addSwimmer(data){
+  var arr=getSwimmers();
+  var sw={id:uid(),firstName:data.firstName||'',lastName:data.lastName||'',email:data.email||'',photo:data.photo||null,createdAt:new Date().toISOString()};
+  arr.push(sw);localStorage.setItem(swimmersKey(),JSON.stringify(arr));return sw;
+}
+function deleteSwimmer(swimmerId){
+  var arr=getSwimmers().filter(function(s){return s.id!==swimmerId;});
+  localStorage.setItem(swimmersKey(),JSON.stringify(arr));
+  Object.keys(localStorage).forEach(function(k){if(k.indexOf(swimmerId)!==-1)localStorage.removeItem(k);});
+}
+function swimmerInitials(sw){return((sw.firstName||'').charAt(0)+(sw.lastName||'').charAt(0)).toUpperCase()||'?';}
+function swimmerAvatarHTML(sw,size){
+  size=size||40;
+  if(sw.photo)return '<img src="'+sw.photo+'" style="width:'+size+'px;height:'+size+'px;border-radius:50%;object-fit:cover;flex-shrink:0">';
+  var bg=['#2176e8','#ef4444','#f97316','#10b981','#8b5cf6'];
+  var color=bg[sw.id.charCodeAt(0)%bg.length];
+  return '<div style="width:'+size+'px;height:'+size+'px;border-radius:50%;background:'+color+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:'+(size*0.36)+'px;flex-shrink:0;pointer-events:none">'+swimmerInitials(sw)+'</div>';
+}
+
+// ── PHOTO AJOUT ──
+var _nswPhotoData=null;
+function handleNswPhoto(input){
+  var f=input.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    _nswPhotoData=e.target.result;
+    var prev=document.getElementById('nsw-photo-preview');
+    if(prev)prev.innerHTML='<img src="'+_nswPhotoData+'" style="width:60px;height:60px;object-fit:cover;border-radius:50%;pointer-events:none">';
+  };r.readAsDataURL(f);
+}
+function openAddSwimmerModal(){
+  _nswPhotoData=null;
+  var prev=document.getElementById('nsw-photo-preview');
+  if(prev)prev.innerHTML='<span style="color:var(--muted);font-size:1.4rem;pointer-events:none">📷</span>';
+  ['nsw-prenom','nsw-nom','nsw-email'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('modal-add-swimmer').style.display='flex';
+}
+function submitAddSwimmer(){
+  var prenom=(document.getElementById('nsw-prenom').value||'').trim();
+  var nom=(document.getElementById('nsw-nom').value||'').trim();
+  if(!prenom||!nom){showToast('Prénom et nom obligatoires');return;}
+  var email=(document.getElementById('nsw-email').value||'').trim();
+  addSwimmer({firstName:prenom,lastName:nom,email:email,photo:_nswPhotoData});
+  document.getElementById('modal-add-swimmer').style.display='none';
+  showToast(prenom+' '+nom+' ajouté(e)');
+  renderSwimmerManage();
+}
+function confirmDeleteSwimmer(swimmerId){
+  var sw=getSwimmers().find(function(s){return s.id===swimmerId;});if(!sw)return;
+  var msg=document.getElementById('modal-delete-swimmer-msg');
+  if(msg)msg.textContent='Supprimer '+sw.firstName+' '+sw.lastName+' ? Toutes ses données (HRV, poids, performances) seront définitivement effacées.';
+  document.getElementById('modal-delete-swimmer-confirm').onclick=function(){
+    deleteSwimmer(swimmerId);
+    document.getElementById('modal-delete-swimmer').style.display='none';
+    showToast('Nageur supprimé');renderSwimmerManage();
+  };
+  document.getElementById('modal-delete-swimmer').style.display='flex';
+}
+
+// ── NAVIGATION SOUS-ONGLETS ──
+function showSwimmerTab(tab){
+  ['forme','perfs','manage'].forEach(function(t){
+    var p=document.getElementById('panel-swimmers-'+t);
+    var b=document.getElementById('stab-'+t);
+    if(p)p.style.display=t===tab?'':'none';
+    if(b){b.style.borderBottom=t===tab?'3px solid var(--blue2,#2176e8)':'3px solid transparent';b.style.color=t===tab?'var(--blue2,#2176e8)':'var(--muted)';}
+  });
+  if(tab==='forme')renderSwimmerGrid();
+  if(tab==='perfs')renderSwimmerPerfs();
+  if(tab==='manage')renderSwimmerManage();
+}
+
+// ── GÉRER NAGEURS ──
+function renderSwimmerManage(){
+  var el=document.getElementById('panel-swimmers-manage');if(!el)return;
+  var hasPin=false;
+  if(typeof currentClub!=='undefined'&&currentClub&&currentCoachId){
+    var co=currentClub.coaches&&currentClub.coaches.find(function(c){return c.id===currentCoachId;});
+    hasPin=!!(co&&co.has_pin);
+  }
+  if(!hasPin){el.innerHTML='<div style="text-align:center;padding:48px 20px;color:var(--muted);font-size:.9rem">Accès réservé au coach principal.</div>';return;}
+  var arr=getSwimmers();
+  var html='<div style="display:flex;justify-content:flex-end;margin-bottom:16px">'
+    +'<button onclick="openAddSwimmerModal()" style="padding:9px 16px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;min-height:44px">+ Ajouter un nageur</button></div>';
+  if(!arr.length){
+    html+='<div style="text-align:center;padding:40px;color:var(--muted);font-size:.88rem">Aucun nageur. Cliquez sur "+ Ajouter un nageur".</div>';
+  } else {
+    html+='<div style="display:flex;flex-direction:column;gap:10px">';
+    arr.forEach(function(sw){
+      html+='<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border-radius:10px;border:1px solid var(--border,#e5e7eb)">'
+        +swimmerAvatarHTML(sw,40)
+        +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:.92rem">'+sw.firstName+' '+sw.lastName+'</div>'
+        +(sw.email?'<div style="font-size:.78rem;color:var(--muted)">'+sw.email+'</div>':'')+'</div>'
+        +'<button onclick="confirmDeleteSwimmer(\''+sw.id+'\')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1.1rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">🗑</button>'
+        +'</div>';
+    });
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+
+// ── FORME — utilitaires ──
+function swRelativeDate(dateStr){
+  if(!dateStr)return'';var d=new Date(dateStr),now=new Date();
+  var diff=Math.floor((now-d)/86400000);
+  if(diff===0)return'aujourd\'hui';if(diff===1)return'hier';
+  if(diff<7)return'il y a '+diff+' jours';
+  return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+}
+function swHRVData(sw){
+  try{
+    var db=loadHRVDB();
+    var full=(sw.firstName+' '+sw.lastName).toLowerCase();
+    var nag=(db.nageurs||[]).find(function(n){return n.nom&&n.nom.toLowerCase()===full;});
+    if(!nag||(nag.historique||[]).length===0)return null;
+    return [].concat(nag.historique).sort(function(a,b){return a.date<b.date?1:-1;})[0];
+  }catch(e){return null;}
+}
+function swPoidsData(sw){
+  try{
+    var db=pDB();var full=(sw.firstName+' '+sw.lastName).toLowerCase();
+    var swimmer=(db.swimmers||[]).find(function(s){return((s.prenom||'')+' '+(s.nom||'')).toLowerCase()===full;});
+    if(!swimmer||(swimmer.entries||[]).length===0)return null;
+    var sorted=[].concat(swimmer.entries).sort(function(a,b){return a.date<b.date?1:-1;});
+    return{last:sorted[0],prev:sorted[1]||null};
+  }catch(e){return null;}
+}
+function swMiniGauge(rmssd){
+  var pct=Math.min((rmssd||0)/80,1);
+  var color=rmssd>=45?'#10b981':rmssd>=25?'#f59e0b':'#ef4444';
+  var r=16,circ=2*Math.PI*r,dash=pct*circ;
+  return '<svg width="36" height="36" viewBox="0 0 36 36" style="pointer-events:none"><circle cx="18" cy="18" r="'+r+'" fill="none" stroke="#e5e7eb" stroke-width="4"/><circle cx="18" cy="18" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="4" stroke-dasharray="'+dash+' '+(circ-dash)+'" stroke-dashoffset="'+(circ*0.25)+'" stroke-linecap="round"/></svg>';
+}
+
+// ── FORME — vue grille ──
+function renderSwimmerGrid(){
+  var el=document.getElementById('panel-swimmers-forme');if(!el)return;
+  var arr=getSwimmers();
+  if(!arr.length){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:.88rem">Aucun nageur — ajoutez-en dans l\'onglet "Gérer nageurs".</div>';return;
+  }
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px">';
+  arr.forEach(function(sw){
+    var hrv=swHRVData(sw);var poids=swPoidsData(sw);
+    var poidsDelta='';
+    if(poids&&poids.prev){
+      var d=+(poids.last.weight-poids.prev.weight).toFixed(1);
+      var arrow=d>0?'↑':d<0?'↓':'→';var c=d>0?'#ef4444':d<0?'#10b981':'#6b7280';
+      poidsDelta=' <span style="color:'+c+'">'+arrow+' '+(d>0?'+':'')+d+' kg</span>';
+    }
+    html+='<div onclick="showSwimmerDetail(\''+sw.id+'\')" style="background:var(--card);border-radius:12px;padding:14px;border:1px solid var(--border,#e5e7eb);cursor:pointer">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+      +swimmerAvatarHTML(sw,36)
+      +'<div style="font-weight:700;font-size:.85rem;line-height:1.2;min-width:0;overflow:hidden">'+sw.firstName+'<br><span style="text-transform:uppercase;letter-spacing:.03em;font-size:.78rem">'+sw.lastName+'</span></div></div>'
+      +'<div style="font-size:.78rem;margin-bottom:8px">'
+        +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><span style="pointer-events:none">❤️</span>'+(hrv?swMiniGauge(hrv.rmssd):'')
+        +'<span style="font-weight:600">'+(hrv?hrv.rmssd+' ms':'<span style="color:var(--muted)">–</span>')+'</span></div>'
+        +'<div style="color:var(--muted);font-size:.72rem;padding-left:2px">'+(hrv?swRelativeDate(hrv.date):'Aucune mesure')+'</div></div>'
+      +'<div style="font-size:.78rem">'
+        +'<div style="font-weight:600">⚖️ '+(poids?poids.last.weight+' kg'+poidsDelta:'<span style="color:var(--muted)">–</span>')+'</div>'
+        +'<div style="color:var(--muted);font-size:.72rem;padding-left:2px">'+(poids?swRelativeDate(poids.last.date):'Aucune pesée')+'</div></div>'
+      +'</div>';
+  });
+  html+='</div>';el.innerHTML=html;
+}
+
+// ── FORME — vue détail ──
+function showSwimmerDetail(swimmerId){
+  var sw=getSwimmers().find(function(s){return s.id===swimmerId;});if(!sw)return;
+  var el=document.getElementById('panel-swimmers-forme');if(!el)return;
+  var hrv=swHRVData(sw);var poids=swPoidsData(sw);
+  var wearable=function(name,rows){
+    return '<div style="border:1px solid var(--border,#e5e7eb);border-radius:10px;padding:12px">'
+      +'<div style="font-weight:600;font-size:.85rem;margin-bottom:10px">'+(name==='Oura Ring'?'🔵':'🖤')+' '+name
+      +' <span style="background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;font-size:.65rem">Bientôt</span></div>'
+      +rows.map(function(r){return'<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:2px 0"><span style="color:var(--muted)">'+r+'</span><span>—</span></div>';}).join('')
+      +'<button disabled style="width:100%;margin-top:10px;padding:7px;background:#f3f4f6;border:none;border-radius:7px;font-size:.78rem;color:var(--muted);cursor:default">Connecter</button></div>';
+  };
+  el.innerHTML='<button onclick="renderSwimmerGrid()" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--blue2,#2176e8);font-size:.9rem;cursor:pointer;padding:4px 0;margin-bottom:16px;font-weight:600;min-height:44px">← Retour</button>'
+    +'<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">'+swimmerAvatarHTML(sw,52)
+    +'<div><div style="font-size:1.1rem;font-weight:700">'+sw.firstName+' '+sw.lastName+'</div>'+(sw.email?'<div style="font-size:.8rem;color:var(--muted)">'+sw.email+'</div>':'')+'</div></div>'
+    // HRV
+    +'<div style="background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--border,#e5e7eb);margin-bottom:14px">'
+    +'<div style="font-weight:700;font-size:.92rem;margin-bottom:10px">❤️ HRV</div>'
+    +(hrv?'<div style="font-size:1.5rem;font-weight:700;color:var(--blue2,#2176e8)">'+hrv.rmssd+' ms</div>'
+      +'<div style="font-size:.8rem;color:var(--muted)">Score '+hrv.note+'/10 — '+swRelativeDate(hrv.date)+'</div>'
+      +(hrv.commentaire?'<div style="font-size:.82rem;margin-top:8px;padding:8px;background:var(--bg,#f8fafc);border-radius:8px">'+hrv.commentaire+'</div>':'')
+      :'<div style="color:var(--muted);font-size:.85rem">Aucune mesure enregistrée.</div>')+'</div>'
+    // Poids
+    +'<div style="background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--border,#e5e7eb);margin-bottom:14px">'
+    +'<div style="font-weight:700;font-size:.92rem;margin-bottom:10px">⚖️ Poids</div>'
+    +(poids?'<div style="font-size:1.5rem;font-weight:700">'+poids.last.weight+' kg</div>'
+      +'<div style="font-size:.8rem;color:var(--muted)">'+swRelativeDate(poids.last.date)+'</div>'
+      :'<div style="color:var(--muted);font-size:.85rem">Aucune pesée enregistrée.</div>')+'</div>'
+    // Wearables
+    +'<div style="background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--border,#e5e7eb)">'
+    +'<div style="font-weight:700;font-size:.92rem;margin-bottom:12px">⌚ Wearables</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    +wearable('Oura Ring',['Readiness','Sommeil','Qualité','FC repos','VFC (HRV)'])
+    +wearable('Whoop',['Recovery','Strain','Sommeil','FC repos','VFC (HRV)'])
+    +'</div></div>';
+}
+
+// ── PERFS & VIDÉO — accordéon ──
+function renderSwimmerPerfs(){
+  var el=document.getElementById('panel-swimmers-perfs');if(!el)return;
+  var arr=getSwimmers();
+  if(!arr.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:.88rem">Aucun nageur — ajoutez-en dans "Gérer nageurs".</div>';return;}
+  var html='<div style="display:flex;flex-direction:column;gap:8px">';
+  arr.forEach(function(sw){
+    var hrv=swHRVData(sw);var poids=swPoidsData(sw);
+    html+='<div style="border:1px solid var(--border,#e5e7eb);border-radius:10px;overflow:hidden">'
+      +'<button onclick="toggleSwAccordion(\'sacc-'+sw.id+'\')" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:none;cursor:pointer;text-align:left;min-height:44px">'
+      +swimmerAvatarHTML(sw,36)
+      +'<span style="font-weight:600;flex:1;font-size:.9rem">'+sw.firstName+' '+sw.lastName+'</span>'
+      +'<span style="color:var(--muted);font-size:.75rem;pointer-events:none">▼</span></button>'
+      +'<div id="sacc-'+sw.id+'" style="display:none;padding:14px;border-top:1px solid var(--border,#e5e7eb)">'
+      +'<div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap">'
+      +'<div style="font-size:.82rem"><span style="color:var(--muted)">❤️ HRV : </span>'+(hrv?hrv.rmssd+' ms':'–')+'</div>'
+      +'<div style="font-size:.82rem"><span style="color:var(--muted)">⚖️ Poids : </span>'+(poids?poids.last.weight+' kg':'–')+'</div>'
+      +'</div>'
+      +'<div style="color:var(--muted);font-size:.82rem;padding:12px;background:var(--bg,#f8fafc);border-radius:8px;text-align:center">Analyse vidéo disponible dans l\'onglet "Analyse vidéo"</div>'
+      +'</div></div>';
+  });
+  html+='</div>';el.innerHTML=html;
+}
+function toggleSwAccordion(id){var el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}
+
 // Sinon l'écran coaches est déjà visible
 } catch(e) {
   document.body.innerHTML = '<div style="padding:20px;font-family:monospace;color:red"><b>ERREUR JS:</b><br>' + e.message + '<br><br>' + e.stack + '</div>';
 }
 
 </script>
+
+<!-- ══ MODAL AJOUT NAGEUR ══ -->
+<div id="modal-add-swimmer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:14px;padding:24px;width:min(92vw,400px);max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <b style="font-size:1.05rem">Ajouter un nageur</b>
+      <button onclick="document.getElementById('modal-add-swimmer').style.display='none'" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);min-width:44px;min-height:44px">✕</button>
+    </div>
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Prénom *</label>
+    <input id="nsw-prenom" placeholder="Prénom" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:12px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Nom *</label>
+    <input id="nsw-nom" placeholder="Nom" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:12px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <details style="margin-bottom:12px">
+      <summary style="font-size:.82rem;font-weight:600;cursor:pointer;margin-bottom:8px;user-select:none">Options</summary>
+      <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px;margin-top:8px">Email</label>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <input id="nsw-email" type="email" placeholder="email@exemple.com" style="flex:1;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.9rem;box-sizing:border-box;background:var(--bg,#f8fafc)">
+        <button disabled style="padding:7px 10px;background:#f3f4f6;border:none;border-radius:8px;font-size:.75rem;color:var(--muted);cursor:default;white-space:nowrap">Inviter <span style="background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;font-size:.65rem">Bientôt</span></button>
+      </div>
+      <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:6px">Photo</label>
+      <div id="nsw-photo-preview" onclick="document.getElementById('nsw-photo-input').click()" style="width:60px;height:60px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;cursor:pointer">
+        <span style="color:var(--muted);font-size:1.4rem;pointer-events:none">📷</span>
+      </div>
+      <input id="nsw-photo-input" type="file" accept="image/*" style="display:none" onchange="handleNswPhoto(this)">
+    </details>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="document.getElementById('modal-add-swimmer').style.display='none'" style="padding:9px 18px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;background:none;cursor:pointer;font-size:.9rem;min-height:44px">Annuler</button>
+      <button onclick="submitAddSwimmer()" style="padding:9px 18px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600;min-height:44px">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL SUPPRESSION NAGEUR ══ -->
+<div id="modal-delete-swimmer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:14px;padding:24px;width:min(88vw,360px)">
+    <b style="font-size:1rem;display:block;margin-bottom:10px">Supprimer ce nageur ?</b>
+    <p id="modal-delete-swimmer-msg" style="font-size:.88rem;color:var(--muted);margin:0 0 20px;line-height:1.5"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="document.getElementById('modal-delete-swimmer').style.display='none'" style="padding:9px 18px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;background:none;cursor:pointer;min-height:44px">Annuler</button>
+      <button id="modal-delete-swimmer-confirm" style="padding:9px 18px;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px">Supprimer</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
