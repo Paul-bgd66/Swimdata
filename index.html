@@ -567,18 +567,37 @@ body.visitor-mode .visitor-banner{display:flex}
         <div class="sb-item" id="snav-poids" onclick="showPanel('poids')" style="display:none">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span id="snav-poids-lbl">Suivi poids</span>
         </div>
-        <div class="sb-item" id="snav-perf" onclick="showPanel('perf')">
+        <div class="sb-item" id="snav-perf" onclick="showPanel('perf')" style="display:none">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="6" height="10" rx="1"/><rect x="9" y="7" width="6" height="15" rx="1"/><rect x="16" y="15" width="6" height="7" rx="1"/></svg></span>
           <span id="snav-perf-lbl">Performances</span>
         </div>
-        <div class="sb-item" id="snav-video" onclick="showPanel('video')">
+        <div class="sb-item" id="snav-video" onclick="showPanel('video')" style="display:none">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23,7 16,12 23,17"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></span><span id="snav-video-lbl">Analyse vidéo</span>
         </div>
                 <div class="sb-item" id="snav-hrv" onclick="showPanel('hrv')" style="display:none">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span id="snav-hrv-lbl">Suivi HRV</span>
         </div>
-        <div class="sb-item" id="snav-swimmers" onclick="showPanel('swimmers')">
-          <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span id="snav-swimmers-lbl">Mes nageurs</span>
+        <!-- MES NAGEURS — accordéon -->
+        <div class="sb-item" id="snav-swimmers" onclick="toggleSwimmersAccordion()" style="justify-content:space-between">
+          <span style="display:flex;align-items:center;gap:8px">
+            <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <span id="snav-swimmers-lbl">Mes nageurs</span>
+          </span>
+          <span id="snav-swimmers-chevron" style="font-size:.65rem;color:var(--muted);transition:transform .2s;pointer-events:none">▶</span>
+        </div>
+        <div id="snav-swimmers-sub" style="display:none">
+          <div class="sb-item" id="snav-sante" onclick="showNageurSection('hrv')" style="padding-left:28px;font-size:.85rem">
+            <span class="sb-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>Santé
+          </div>
+          <div class="sb-item" id="snav-nageur-perf" onclick="showNageurSection('perf')" style="padding-left:28px;font-size:.85rem">
+            <span class="sb-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="6" height="10" rx="1"/><rect x="9" y="7" width="6" height="15" rx="1"/><rect x="16" y="15" width="6" height="7" rx="1"/></svg></span>Performances
+          </div>
+          <div class="sb-item" id="snav-nageur-video" onclick="showNageurSection('video')" style="padding-left:28px;font-size:.85rem">
+            <span class="sb-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23,7 16,12 23,17"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></span>Vidéo
+          </div>
+          <div class="sb-item" id="snav-manage" onclick="showNageurSection('manage')" style="padding-left:28px;font-size:.85rem">
+            <span class="sb-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>Gérer mes nageurs
+          </div>
         </div>
 <div class="sb-item" id="snav-planning" onclick="showPanel('planning')">
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span id="snav-planning-lbl">Planning prévisionnel</span>
@@ -803,7 +822,13 @@ body.visitor-mode .visitor-banner{display:flex}
 <!-- SUIVI HRV -->
 <div class="panel" id="panel-hrv"></div>
 
-<!-- MES NAGEURS -->
+<!-- GÉRER MES NAGEURS -->
+<div class="panel" id="panel-manage">
+  <div class="page-title">Gérer mes nageurs</div>
+  <div id="panel-manage-content"></div>
+</div>
+
+<!-- MES NAGEURS (V1 — conservé) -->
 <div class="panel" id="panel-swimmers">
   <div class="page-title">Mes nageurs</div>
   <div style="display:flex;gap:0;border-bottom:2px solid var(--border,#e5e7eb);margin-bottom:16px;margin-top:8px">
@@ -2405,6 +2430,7 @@ function showPanel(name){
   if(name==='planning')renderPlanning();
   if(name==='perf')renderPerf();
   if(name==='swimmers')showSwimmerTab('forme');
+  if(name==='manage')renderNageurManage();
   // Ferme la sidebar après navigation
   if(sbOpen){ sbOpen=false; document.getElementById('sidebar').classList.add('collapsed'); document.getElementById('menu-btn').classList.remove('open'); }
 }
@@ -2434,7 +2460,7 @@ function renderSB(){
       <span class="sb-int-km" style="color:${ICOLORS[k]}">${fkms(wi[k])}</span>
     </div>`).join('');
   // Visibilité des onglets selon mode visiteur
-  var _navKeys={dash:'snav-dash',hist:'snav-hist',perf:'snav-perf',video:'snav-video',planning:'snav-planning',swimmers:'snav-swimmers'};
+  var _navKeys={dash:'snav-dash',hist:'snav-hist',planning:'snav-planning'};
   var _vt=window._visitorMode?getVisitorSettings().tabs:null;
   Object.keys(_navKeys).forEach(function(key){
     var el=document.getElementById(_navKeys[key]);
@@ -6920,6 +6946,79 @@ if(session){
   loadCanet66();
   showScreen('screen-splash');
 }
+// ════════════════════════════════
+// MES NAGEURS — accordéon sidebar + navigation
+// ════════════════════════════════
+
+function toggleSwimmersAccordion(){
+  var sub=document.getElementById('snav-swimmers-sub');
+  var ch=document.getElementById('snav-swimmers-chevron');
+  var open=sub&&sub.style.display!=='none';
+  if(sub)sub.style.display=open?'none':'block';
+  if(ch)ch.style.transform=open?'':'rotate(90deg)';
+}
+
+var _nageurSubItems=['snav-sante','snav-nageur-perf','snav-nageur-video','snav-manage'];
+function showNageurSection(section){
+  // ouvrir l'accordéon
+  var sub=document.getElementById('snav-swimmers-sub');
+  var ch=document.getElementById('snav-swimmers-chevron');
+  if(sub)sub.style.display='block';
+  if(ch)ch.style.transform='rotate(90deg)';
+  // activer le bon sous-item
+  _nageurSubItems.forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('active');});
+  var map={hrv:'snav-sante',perf:'snav-nageur-perf',video:'snav-nageur-video',manage:'snav-manage'};
+  var activeEl=document.getElementById(map[section]);if(activeEl)activeEl.classList.add('active');
+  // afficher le panel
+  if(section==='manage'){
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('show');});
+    var mp=document.getElementById('panel-manage');if(mp)mp.classList.add('show');
+    // retirer les actifs snav normaux
+    document.querySelectorAll('.sb-item[id^="snav-"]').forEach(function(el){el.classList.remove('active');});
+    renderNageurManage();
+    if(typeof closeSB==='function')closeSB();
+  } else {
+    showPanel(section);
+    // re-activer le sous-item (showPanel a effacé tous les actifs)
+    if(activeEl)activeEl.classList.add('active');
+  }
+}
+
+function renderNageurManage(){
+  var el=document.getElementById('panel-manage-content');if(!el)return;
+  var arr=getSwimmers();
+  var html='<div style="display:flex;justify-content:flex-end;margin-bottom:16px">'
+    +'<button onclick="openAddSwimmerModal()" style="padding:9px 16px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;min-height:44px">+ Ajouter un nageur</button></div>';
+  if(!arr.length){
+    html+='<div style="text-align:center;padding:40px;color:var(--muted);font-size:.88rem">Aucun nageur. Cliquez sur "+ Ajouter un nageur".</div>';
+  } else {
+    html+='<div style="display:flex;flex-direction:column;gap:10px">';
+    arr.forEach(function(sw){
+      html+='<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border-radius:10px;border:1px solid var(--border,#e5e7eb)">'
+        +swimmerAvatarHTML(sw,40)
+        +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:.92rem">'+sw.firstName+' '+sw.lastName+'</div>'
+        +(sw.email?'<div style="font-size:.78rem;color:var(--muted)">'+sw.email+'</div>':'')+'</div>'
+        +'<button onclick="confirmDeleteSwimmerV2(\''+sw.id+'\')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1.1rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">🗑</button>'
+        +'</div>';
+    });
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+
+function confirmDeleteSwimmerV2(swimmerId){
+  var sw=getSwimmers().find(function(s){return s.id===swimmerId;});if(!sw)return;
+  var msg=document.getElementById('modal-delete-swimmer-msg');
+  if(msg)msg.textContent='Supprimer '+sw.firstName+' '+sw.lastName+' ?';
+  document.getElementById('modal-delete-swimmer-confirm').onclick=function(){
+    deleteSwimmer(swimmerId);
+    document.getElementById('modal-delete-swimmer').style.display='none';
+    showToast('Nageur supprimé');
+    renderNageurManage();
+  };
+  document.getElementById('modal-delete-swimmer').style.display='flex';
+}
+
 // ════════════════════════════════
 // MES NAGEURS
 // ════════════════════════════════
