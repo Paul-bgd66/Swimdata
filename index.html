@@ -3783,6 +3783,11 @@ function renderVideo(){
 function renderVidSwimmerList(){
   const db=loadVDB();
   const el=document.getElementById('vid-swimmer-list');if(!el)return;
+  const existingVidIds=db.swimmers.map(function(s){return s.id;});
+  getSwimmers().forEach(function(sw){
+    if(existingVidIds.indexOf(sw.id)===-1)
+      db.swimmers.push({id:sw.id,prenom:sw.firstName,nom:sw.lastName,videos:[]});
+  });
   if(!db.swimmers.length){
     el.innerHTML='<div style="color:var(--muted);font-size:.76rem;text-align:center;padding:12px">'+t('video.none')+'</div>';
     return;
@@ -5336,6 +5341,11 @@ function renderPerf(){
   var panel=document.getElementById('panel-perf');
   if(!panel)return;
   var db=loadPerfDB();
+  var existingPerfIds=db.nageurs.map(function(n){return n.id;});
+  getSwimmers().forEach(function(sw){
+    if(existingPerfIds.indexOf(sw.id)===-1)
+      db.nageurs.push({id:sw.id,nom:sw.firstName+' '+sw.lastName,performances:[]});
+  });
   var bassin=_perfBassin;
   var content=document.getElementById('perf-content');
   if(!content)return;
@@ -5346,7 +5356,7 @@ function renderPerf(){
       +'<button onclick="setPerfBassin(50)" style="flex:1;padding:10px;border-radius:8px;border:2px solid '+(bassin===50?'var(--blue2)':'var(--border)')+';background:'+(bassin===50?'rgba(33,118,232,.08)':'var(--bg)')+';font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;color:var(--text)">Bassin 50m</button>'
     +'</div>'
     +(db.nageurs.length===0
-      ?'<div style="text-align:center;padding:40px;color:var(--muted)">Aucun nageur — cliquez sur "+ Nageur"</div>'
+      ?'<div style="text-align:center;padding:40px;color:var(--muted)">Aucun nageur enregistré</div>'
       :db.nageurs.map(function(n){return renderPerfNageur(n,bassin);}).join('')
     );
 }
@@ -6238,6 +6248,11 @@ function renderHRV(){
 function renderHRVListe(){
   const panel=document.getElementById('panel-hrv');
   const db=loadHRVDB();
+  const existingHrvNoms=db.nageurs.map(function(n){return n.nom;});
+  getSwimmers().forEach(function(sw){
+    var nom=sw.firstName+' '+sw.lastName;
+    if(existingHrvNoms.indexOf(nom)===-1) db.nageurs.push({nom:nom,historique:[]});
+  });
   const _v=window._visitorMode;
 
   let html=`
@@ -7030,12 +7045,31 @@ function updateSwimmer(swimmerId, data){
   if(idx<0)return;
   if(data.firstName)arr[idx].firstName=data.firstName;
   if(data.lastName!==undefined)arr[idx].lastName=data.lastName;
+  if(data.email!==undefined)arr[idx].email=data.email;
+  if(data.photo!==undefined)arr[idx].photo=data.photo;
   localStorage.setItem(swimmersKey(),JSON.stringify(arr));
+}
+var _eswPhotoData=null;
+function handleEswPhoto(input){
+  var f=input.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    _eswPhotoData=e.target.result;
+    var prev=document.getElementById('esw-photo-preview');
+    if(prev)prev.innerHTML='<img src="'+_eswPhotoData+'" style="width:60px;height:60px;object-fit:cover;border-radius:50%;pointer-events:none">';
+  };r.readAsDataURL(f);
 }
 function openEditSwimmerModal(swimmerId){
   var sw=getSwimmers().find(function(s){return s.id===swimmerId;});if(!sw)return;
+  _eswPhotoData=sw.photo||null;
   var ep=document.getElementById('esw-prenom');var en=document.getElementById('esw-nom');
+  var ee=document.getElementById('esw-email');var prev=document.getElementById('esw-photo-preview');
   if(ep)ep.value=sw.firstName;if(en)en.value=sw.lastName;
+  if(ee)ee.value=sw.email||'';
+  if(prev){
+    if(sw.photo)prev.innerHTML='<img src="'+sw.photo+'" style="width:60px;height:60px;object-fit:cover;border-radius:50%;pointer-events:none">';
+    else prev.innerHTML='<span style="color:var(--muted);font-size:1.4rem;pointer-events:none">📷</span>';
+  }
   document.getElementById('esw-submit-btn').onclick=function(){submitEditSwimmer(swimmerId);};
   document.getElementById('modal-edit-swimmer').style.display='flex';
   setTimeout(function(){if(ep)ep.focus();},150);
@@ -7044,7 +7078,8 @@ function submitEditSwimmer(swimmerId){
   var prenom=(document.getElementById('esw-prenom').value||'').trim();
   var nom=(document.getElementById('esw-nom').value||'').trim();
   if(!prenom||!nom){showToast('Prénom et nom obligatoires');return;}
-  updateSwimmer(swimmerId,{firstName:prenom,lastName:nom});
+  var email=(document.getElementById('esw-email').value||'').trim();
+  updateSwimmer(swimmerId,{firstName:prenom,lastName:nom,email:email,photo:_eswPhotoData});
   document.getElementById('modal-edit-swimmer').style.display='none';
   showToast('Nageur mis à jour');
   renderNageurManage();
@@ -7312,7 +7347,7 @@ function toggleSwAccordion(id){var el=document.getElementById(id);if(el)el.style
 
 <!-- ══ MODAL ÉDITION NAGEUR ══ -->
 <div id="modal-edit-swimmer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center">
-  <div style="background:var(--card);border-radius:14px;padding:24px;width:min(92vw,400px)">
+  <div style="background:var(--card);border-radius:14px;padding:24px;width:min(92vw,400px);max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <b style="font-size:1.05rem">Modifier le nageur</b>
       <button onclick="document.getElementById('modal-edit-swimmer').style.display='none'" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);min-width:44px;min-height:44px">✕</button>
@@ -7320,7 +7355,14 @@ function toggleSwAccordion(id){var el=document.getElementById(id);if(el)el.style
     <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Prénom *</label>
     <input id="esw-prenom" placeholder="Prénom" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:12px;box-sizing:border-box;background:var(--bg,#f8fafc)">
     <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Nom *</label>
-    <input id="esw-nom" placeholder="Nom" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:20px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <input id="esw-nom" placeholder="Nom" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:12px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Email</label>
+    <input id="esw-email" type="email" placeholder="email@exemple.com" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.9rem;margin-bottom:12px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:6px">Photo</label>
+    <div id="esw-photo-preview" onclick="document.getElementById('esw-photo-input').click()" style="width:60px;height:60px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;margin-bottom:16px;overflow:hidden;cursor:pointer">
+      <span style="color:var(--muted);font-size:1.4rem;pointer-events:none">📷</span>
+    </div>
+    <input id="esw-photo-input" type="file" accept="image/*" style="display:none" onchange="handleEswPhoto(this)">
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button onclick="document.getElementById('modal-edit-swimmer').style.display='none'" style="padding:9px 18px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;background:none;cursor:pointer;font-size:.9rem;min-height:44px">Annuler</button>
       <button id="esw-submit-btn" style="padding:9px 18px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600;min-height:44px">Enregistrer</button>
