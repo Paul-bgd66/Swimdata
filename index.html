@@ -3255,6 +3255,11 @@ function _mergePoidsFromApi(){
 
 function renderPoids() {
   pDB();
+  var existingPoidsIds=_poidsDB.swimmers.map(function(s){return s.id;});
+  getSwimmers().forEach(function(sw){
+    if(existingPoidsIds.indexOf(sw.id)===-1)
+      _poidsDB.swimmers.push({id:sw.id,prenom:sw.firstName,nom:sw.lastName,entries:[]});
+  });
   if (!_poidsActiveId && _poidsDB.swimmers.length > 0) {
     _poidsActiveId = _poidsDB.swimmers[0].id;
   }
