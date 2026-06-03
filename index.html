@@ -2272,15 +2272,7 @@ const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&g
 
 function getMonday(d){const x=new Date(d);x.setHours(0,0,0,0);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x}
 function getSunday(m){const x=new Date(m);x.setDate(m.getDate()+6);return x}
-function inRange(from,to){
-  var indivSw=getCoachMode()==='individual'?getIndivSwimmer():null;
-  return DB.sessions.filter(function(s){
-    const d=new Date(s.date);d.setHours(0,0,0,0);
-    if(!(d>=from&&d<=to))return false;
-    if(indivSw)return(s._swimmerId||null)===indivSw.id;
-    return true;
-  });
-}
+function inRange(from,to){return DB.sessions.filter(s=>{const d=new Date(s.date);d.setHours(0,0,0,0);return d>=from&&d<=to})}
 function sDist(s){return(s.rows||[]).reduce((a,r)=>a+(parseInt(r.dist)||0),0)}
 function sIntTots(s){const t={};INTS.forEach(k=>t[k]=0);(s.rows||[]).forEach(r=>INTS.forEach(k=>{t[k]+=parseInt(r[k])||0}));return t}
 function sumKm(ss){return ss.reduce((a,s)=>a+sDist(s),0)}
@@ -2296,15 +2288,7 @@ function getRange(p){
   const sy=isBeforeAug20?now.getFullYear()-1:now.getFullYear();
   return{from:new Date(sy,7,20),to:new Date(sy+1,7,19)};
 }
-function getSessions(p){
-  var indivSw=getCoachMode()==='individual'?getIndivSwimmer():null;
-  if(p==='all'){
-    var all=[...DB.sessions];
-    if(indivSw)all=all.filter(function(s){return(s._swimmerId||null)===indivSw.id;});
-    return all;
-  }
-  const{from,to}=getRange(p);return inRange(from,to);
-}
+function getSessions(p){if(p==='all')return[...DB.sessions];const{from,to}=getRange(p);return inRange(from,to)}
 
 // ════════════════════════════════
 // GROUPES
@@ -2393,11 +2377,71 @@ function sumIntFiltered(ss, forGroup){
 
 // ── MODE COACH ──
 function getCoachMode(){ return localStorage.getItem('coachMode')||'club'; }
+function getCurrentSwimmerId(){
+  var stored=currentCoachId?localStorage.getItem('activeSwimmerId_'+currentCoachId):null;
+  if(stored)return stored;
+  var swimmers=getSwimmers();
+  return swimmers.length?swimmers[0].id:null;
+}
+function setCurrentSwimmerId(id){
+  if(currentCoachId)localStorage.setItem('activeSwimmerId_'+currentCoachId,id);
+  var swimmers=getSwimmers();
+  var idx=swimmers.findIndex(function(s){return s.id===id;});
+  if(idx>=0)_indivSwimmerIdx=idx;
+}
+function getActiveSessionsKey(){
+  if(getCoachMode()==='individual'){
+    var swId=getCurrentSwimmerId();
+    if(!swId)return null;
+    return 'sessions_'+(currentCoachId||'default')+'_'+swId;
+  }
+  return window._userKey||'c66_v3';
+}
+function reloadDB(){
+  var coachData=DB&&DB.coach?DB.coach:{name:'Coach',initials:'C'};
+  var key=getActiveSessionsKey();
+  if(!key){DB={sessions:[],coach:coachData};return;}
+  try{DB=JSON.parse(localStorage.getItem(key))||{sessions:[],coach:coachData};}
+  catch(e){DB={sessions:[],coach:coachData};}
+  if(!DB.coach||!DB.coach.name)DB.coach=coachData;
+}
+function reRenderCurrentPanel(){
+  var shown=document.querySelector('.panel.show');if(!shown)return;
+  var pid=shown.id;
+  if(pid==='panel-dash'){renderDash();renderSB();}
+  else if(pid==='panel-hist')renderHist();
+  else if(pid==='panel-planning')renderPlanning();
+}
+function selectIndivSwimmer(id){
+  setCurrentSwimmerId(id);
+  reloadDB();renderGFBar();reRenderCurrentPanel();
+  var pm=document.getElementById('modal-swimmer-picker');
+  if(pm)pm.style.display='none';
+}
+function openSwimmerPicker(){
+  var swimmers=getSwimmers();
+  var currentId=getCurrentSwimmerId();
+  var list=document.getElementById('swimmer-picker-list');
+  if(!list)return;
+  list.innerHTML=swimmers.length===0
+    ?'<div style="padding:20px;text-align:center;color:var(--muted);font-size:.85rem">Aucun nageur — allez dans Gérer mes nageurs</div>'
+    :swimmers.map(function(sw){
+      var active=sw.id===currentId;
+      return '<button onclick="selectIndivSwimmer(\''+sw.id+'\')" style="display:flex;align-items:center;gap:12px;width:100%;padding:13px 20px;background:'+(active?'rgba(33,118,232,.07)':'none')+';border:none;cursor:pointer;text-align:left;min-height:50px">'
+        +'<span style="font-size:1rem;color:var(--blue2,#2176e8);width:16px;flex-shrink:0">'+(active?'●':'')+'</span>'
+        +swimmerAvatarHTML(sw,36)
+        +'<span style="font-size:.9rem;font-weight:'+(active?'700':'500')+';color:var(--text)">'+sw.firstName+' '+sw.lastName+'</span>'
+        +'</button>';
+    }).join('');
+  document.getElementById('modal-swimmer-picker').style.display='flex';
+}
 var _indivSwimmerIdx=0;
 function getIndivSwimmer(){
   var swimmers=getSwimmers();
   if(!swimmers.length)return null;
-  _indivSwimmerIdx=Math.max(0,Math.min(_indivSwimmerIdx,swimmers.length-1));
+  var swId=getCurrentSwimmerId();
+  var idx=swimmers.findIndex(function(s){return s.id===swId;});
+  _indivSwimmerIdx=idx>=0?idx:0;
   return swimmers[_indivSwimmerIdx];
 }
 function setCoachMode(mode){
@@ -2408,17 +2452,19 @@ function setCoachMode(mode){
     _modeBadge.style.background=mode==='individual'?'rgba(33,118,232,.12)':'rgba(0,0,0,.06)';
     _modeBadge.style.color=mode==='individual'?'var(--blue2,#2176e8)':'var(--muted)';
   }
-  renderGFBar();renderDash();renderSB();
+  reloadDB();renderGFBar();reRenderCurrentPanel();renderSB();
 }
 function prevIndivSwimmer(){
   var swimmers=getSwimmers();if(!swimmers.length)return;
   _indivSwimmerIdx=(_indivSwimmerIdx-1+swimmers.length)%swimmers.length;
-  renderGFBar();renderDash();renderSB();
+  setCurrentSwimmerId(swimmers[_indivSwimmerIdx].id);
+  reloadDB();renderGFBar();reRenderCurrentPanel();renderSB();
 }
 function nextIndivSwimmer(){
   var swimmers=getSwimmers();if(!swimmers.length)return;
   _indivSwimmerIdx=(_indivSwimmerIdx+1)%swimmers.length;
-  renderGFBar();renderDash();renderSB();
+  setCurrentSwimmerId(swimmers[_indivSwimmerIdx].id);
+  reloadDB();renderGFBar();reRenderCurrentPanel();renderSB();
 }
 var _gfSwipeStartX=null;
 function _gfbarTouchStart(e){_gfSwipeStartX=e.touches[0].clientX;}
@@ -2449,7 +2495,7 @@ function renderGFBar(){
       swimmers.length===0
         ?'<span style="font-size:.75rem;color:rgba(255,255,255,.5)">Ajoutez des nageurs dans Gérer mes nageurs</span>'
         :'<button onclick="prevIndivSwimmer()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 10px;color:#fff;cursor:pointer;font-size:.9rem;min-width:44px;min-height:36px">◀</button>'
-          +'<span class="gf-btn on" style="pointer-events:none">'+(sw?sw.firstName+' '+sw.lastName:'—')+'</span>'
+          +'<button onclick="openSwimmerPicker()" class="gf-btn on" style="cursor:pointer;display:flex;align-items:center;gap:5px">'+(sw?sw.firstName+' '+sw.lastName:'—')+'<span style="font-size:.6rem;opacity:.7">▼</span></button>'
           +'<button onclick="nextIndivSwimmer()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 10px;color:#fff;cursor:pointer;font-size:.9rem;min-width:44px;min-height:36px">▶</button>';
     return;
   }
@@ -2828,7 +2874,15 @@ function renderHist(){
   }
   ss.sort((a,b)=>b.date.localeCompare(a.date));
   const countEl=document.getElementById('hist-count');
-  if(countEl)countEl.textContent=ss.length+' '+(ss.length!==1?t('dash.sessions.plural'):t('dash.sessions'))+(activeGroup ? ' — ' + (function(){var g=loadGroups().find(function(x){return x.id===activeGroup;});return g?g.name:'';})() : '');
+  if(countEl){
+    if(getCoachMode()==='individual'){
+      var _histSw=getIndivSwimmer();
+      var _histSwName=_histSw?_histSw.firstName+' '+_histSw.lastName:'';
+      countEl.textContent=ss.length+' '+(ss.length!==1?t('dash.sessions.plural'):t('dash.sessions'))+(_histSwName?' — '+_histSwName:'');
+    } else {
+      countEl.textContent=ss.length+' '+(ss.length!==1?t('dash.sessions.plural'):t('dash.sessions'))+(activeGroup ? ' — ' + (function(){var g=loadGroups().find(function(x){return x.id===activeGroup;});return g?g.name:'';})() : '');
+    }
+  }
   renderSessionTable('hist-table', ss);
 }
 
@@ -4665,10 +4719,6 @@ function saveSeance(){
     rows:nonEmpty.map(r=>({...r})),
     savedAt:new Date().toISOString(),
   };
-  if(getCoachMode()==='individual'){
-    var _iSw=getIndivSwimmer();
-    if(_iSw)obj._swimmerId=_iSw.id;
-  }
   var _isNewSession=!(editingId&&DB.sessions.find(function(s){return s.id===editingId;}));
   if(editingId){
     const i=DB.sessions.findIndex(s=>s.id===editingId);
@@ -5091,7 +5141,14 @@ function launchApp(coach){
   const userKey='c66_coach_'+currentClub.id+'_'+coach.id;
   DB=(()=>{try{return JSON.parse(localStorage.getItem(userKey))||{sessions:[],coach:{name:coach.name,initials:coach.initials||getInitials(coach.name)}}}catch(e){return{sessions:[],coach:{name:coach.name,initials:coach.initials||getInitials(coach.name)}}}})();
   window._userKey=userKey;
-  window.svDB=function(){localStorage.setItem(userKey,JSON.stringify(DB));};
+  window.svDB=function(){
+    if(getCoachMode()==='individual'){
+      var _swKey=getActiveSessionsKey();
+      if(_swKey)localStorage.setItem(_swKey,JSON.stringify(DB));
+    } else {
+      localStorage.setItem(userKey,JSON.stringify(DB));
+    }
+  };
   DB.coach={name:coach.name,initials:coach.initials||getInitials(coach.name)};
   // Header
   document.getElementById('coach-av').textContent=coach.initials||getInitials(coach.name);
@@ -5134,6 +5191,10 @@ function launchApp(coach){
   _mergePlanFromApi();
   _mergeGroupesFromApi();
   _mergeVideosFromApi();
+  // En mode individuel, charger la DB du nageur actif
+  if(getCoachMode()==='individual'){
+    reloadDB();renderGFBar();selPeriod('week');
+  }
 }
 
 // ── FORCE SYNC ALL → SUPABASE ──
@@ -7495,6 +7556,17 @@ function toggleSwAccordion(id){var el=document.getElementById(id);if(el)el.style
       <button onclick="document.getElementById('modal-edit-swimmer').style.display='none'" style="padding:9px 18px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;background:none;cursor:pointer;font-size:.9rem;min-height:44px">Annuler</button>
       <button id="esw-submit-btn" style="padding:9px 18px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600;min-height:44px">Enregistrer</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ MODAL SÉLECTEUR NAGEUR ══ -->
+<div id="modal-swimmer-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:480px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 env(safe-area-inset-bottom,0)">
+    <div style="padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card)">
+      <b style="font-size:.95rem">Choisir un nageur</b>
+      <button onclick="document.getElementById('modal-swimmer-picker').style.display='none'" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);min-width:44px;min-height:44px">✕</button>
+    </div>
+    <div id="swimmer-picker-list" style="padding:8px 0"></div>
   </div>
 </div>
 
