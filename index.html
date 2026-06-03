@@ -549,7 +549,7 @@ body.visitor-mode .visitor-banner{display:flex}
   <button class="visitor-banner-btn" onclick="logout()" id="visitor-quit-btn" data-i18n="visitor.quit">Quitter</button>
 </div>
 
-<div class="gfbar" id="gfbar">
+<div class="gfbar" id="gfbar" ontouchstart="_gfbarTouchStart(event)" ontouchend="_gfbarTouchEnd(event)">
   <span class="gf-lbl" id="gf-group-label" style="font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;margin-right:6px;font-weight:700">Groupe</span>
   <span id="gf-dynamic"></span>
   <button class="gf-btn manage visitor-hide" onclick="openGroupSettings()" data-i18n="groups.manage">⚙ Gérer</button>
@@ -1148,6 +1148,39 @@ body.visitor-mode .visitor-banner{display:flex}
           <div style="font-size:.7rem;color:var(--muted);margin-top:10px;line-height:1.5">Les onglets cochés seront accessibles aux visiteurs.</div>
         </div>
       </div>
+
+      <!-- ACCORDÉON : MODE COACH -->
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+        <div onclick="toggleSettingsSection('sec-coach')" style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;background:var(--bg);user-select:none">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:1.1rem">👤</span>
+            <div>
+              <div style="font-size:.88rem;font-weight:600;color:var(--text)">Mode de création de séance</div>
+              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Club ou coach particulier</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div id="coach-mode-badge" style="font-size:.65rem;font-weight:600;padding:2px 8px;border-radius:10px"></div>
+            <span id="sec-coach-arrow" style="font-size:.75rem;color:var(--muted)">▼</span>
+          </div>
+        </div>
+        <div id="sec-coach" style="display:none;padding:16px;border-top:1px solid var(--border)">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)">
+            <input type="radio" name="coachMode" value="club" id="coach-mode-club" onchange="setCoachMode('club')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
+            <div>
+              <div style="font-size:.85rem;font-weight:600;color:var(--text)">Club — sous-groupes</div>
+              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Séances pour des groupes (Demi-fond, Sprint…)</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg)">
+            <input type="radio" name="coachMode" value="individual" id="coach-mode-individual" onchange="setCoachMode('individual')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
+            <div>
+              <div style="font-size:.85rem;font-weight:600;color:var(--text)">Coach particulier — séances par nageur</div>
+              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Séances assignées à un nageur spécifique</div>
+            </div>
+          </label>
+        </div>
+      </div>
       </div>
 
     </div>
@@ -1600,7 +1633,7 @@ function toggleGeneralSection(){
 }
 
 function toggleSettingsSection(id){
-  var allSections=['sec-int','sec-nage','sec-app','sec-lang','sec-visitor'];
+  var allSections=['sec-int','sec-nage','sec-app','sec-lang','sec-visitor','sec-coach'];
   var el=document.getElementById(id);
   var isOpen=el&&el.style.display!=='none';
   allSections.forEach(function(sid){
@@ -1652,6 +1685,16 @@ function openIntSettings(){
     badge.style.background=nageEnabled?'rgba(34,197,94,.15)':'rgba(0,0,0,.06)';
     badge.style.color=nageEnabled?'#16a34a':'var(--muted)';
   }
+  // Mode coach badge + radio
+  var _mode=getCoachMode();
+  var _modeBadge=document.getElementById('coach-mode-badge');
+  if(_modeBadge){
+    _modeBadge.textContent=_mode==='individual'?'Particulier':'Club';
+    _modeBadge.style.background=_mode==='individual'?'rgba(33,118,232,.12)':'rgba(0,0,0,.06)';
+    _modeBadge.style.color=_mode==='individual'?'var(--blue2,#2176e8)':'var(--muted)';
+  }
+  var _modeRb=document.getElementById('coach-mode-'+_mode);
+  if(_modeRb)_modeRb.checked=true;
   document.getElementById('settings-modal').classList.add('open');
 }
 function closeIntSettings(){
@@ -2229,7 +2272,15 @@ const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&g
 
 function getMonday(d){const x=new Date(d);x.setHours(0,0,0,0);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x}
 function getSunday(m){const x=new Date(m);x.setDate(m.getDate()+6);return x}
-function inRange(from,to){return DB.sessions.filter(s=>{const d=new Date(s.date);d.setHours(0,0,0,0);return d>=from&&d<=to})}
+function inRange(from,to){
+  var indivSw=getCoachMode()==='individual'?getIndivSwimmer():null;
+  return DB.sessions.filter(function(s){
+    const d=new Date(s.date);d.setHours(0,0,0,0);
+    if(!(d>=from&&d<=to))return false;
+    if(indivSw)return(s._swimmerId||null)===indivSw.id;
+    return true;
+  });
+}
 function sDist(s){return(s.rows||[]).reduce((a,r)=>a+(parseInt(r.dist)||0),0)}
 function sIntTots(s){const t={};INTS.forEach(k=>t[k]=0);(s.rows||[]).forEach(r=>INTS.forEach(k=>{t[k]+=parseInt(r[k])||0}));return t}
 function sumKm(ss){return ss.reduce((a,s)=>a+sDist(s),0)}
@@ -2245,7 +2296,15 @@ function getRange(p){
   const sy=isBeforeAug20?now.getFullYear()-1:now.getFullYear();
   return{from:new Date(sy,7,20),to:new Date(sy+1,7,19)};
 }
-function getSessions(p){if(p==='all')return[...DB.sessions];const{from,to}=getRange(p);return inRange(from,to)}
+function getSessions(p){
+  var indivSw=getCoachMode()==='individual'?getIndivSwimmer():null;
+  if(p==='all'){
+    var all=[...DB.sessions];
+    if(indivSw)all=all.filter(function(s){return(s._swimmerId||null)===indivSw.id;});
+    return all;
+  }
+  const{from,to}=getRange(p);return inRange(from,to);
+}
 
 // ════════════════════════════════
 // GROUPES
@@ -2332,6 +2391,45 @@ function sumIntFiltered(ss, forGroup){
   return t;
 }
 
+// ── MODE COACH ──
+function getCoachMode(){ return localStorage.getItem('coachMode')||'club'; }
+var _indivSwimmerIdx=0;
+function getIndivSwimmer(){
+  var swimmers=getSwimmers();
+  if(!swimmers.length)return null;
+  _indivSwimmerIdx=Math.max(0,Math.min(_indivSwimmerIdx,swimmers.length-1));
+  return swimmers[_indivSwimmerIdx];
+}
+function setCoachMode(mode){
+  localStorage.setItem('coachMode',mode);
+  var _modeBadge=document.getElementById('coach-mode-badge');
+  if(_modeBadge){
+    _modeBadge.textContent=mode==='individual'?'Particulier':'Club';
+    _modeBadge.style.background=mode==='individual'?'rgba(33,118,232,.12)':'rgba(0,0,0,.06)';
+    _modeBadge.style.color=mode==='individual'?'var(--blue2,#2176e8)':'var(--muted)';
+  }
+  renderGFBar();renderDash();renderSB();
+}
+function prevIndivSwimmer(){
+  var swimmers=getSwimmers();if(!swimmers.length)return;
+  _indivSwimmerIdx=(_indivSwimmerIdx-1+swimmers.length)%swimmers.length;
+  renderGFBar();renderDash();renderSB();
+}
+function nextIndivSwimmer(){
+  var swimmers=getSwimmers();if(!swimmers.length)return;
+  _indivSwimmerIdx=(_indivSwimmerIdx+1)%swimmers.length;
+  renderGFBar();renderDash();renderSB();
+}
+var _gfSwipeStartX=null;
+function _gfbarTouchStart(e){_gfSwipeStartX=e.touches[0].clientX;}
+function _gfbarTouchEnd(e){
+  if(_gfSwipeStartX===null||getCoachMode()!=='individual')return;
+  var dx=e.changedTouches[0].clientX-_gfSwipeStartX;
+  if(dx>50)prevIndivSwimmer();
+  else if(dx<-50)nextIndivSwimmer();
+  _gfSwipeStartX=null;
+}
+
 function selGroup(gid,btn){
   activeGroup=gid;
   renderGFBar();
@@ -2340,6 +2438,22 @@ function selGroup(gid,btn){
 }
 
 function renderGFBar(){
+  var manageBtn=document.querySelector('#gfbar .gf-btn.manage');
+  if(getCoachMode()==='individual'){
+    var swimmers=getSwimmers();
+    var sw=getIndivSwimmer();
+    var gfl=document.getElementById('gf-group-label');
+    if(gfl)gfl.textContent='Nageur';
+    if(manageBtn)manageBtn.style.display='none';
+    document.getElementById('gf-dynamic').innerHTML=
+      swimmers.length===0
+        ?'<span style="font-size:.75rem;color:rgba(255,255,255,.5)">Ajoutez des nageurs dans Gérer mes nageurs</span>'
+        :'<button onclick="prevIndivSwimmer()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 10px;color:#fff;cursor:pointer;font-size:.9rem;min-width:44px;min-height:36px">◀</button>'
+          +'<span class="gf-btn on" style="pointer-events:none">'+(sw?sw.firstName+' '+sw.lastName:'—')+'</span>'
+          +'<button onclick="nextIndivSwimmer()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 10px;color:#fff;cursor:pointer;font-size:.9rem;min-width:44px;min-height:36px">▶</button>';
+    return;
+  }
+  if(manageBtn)manageBtn.style.display='';
   const groups=loadGroups();
   if(!activeGroup&&groups.length>0) activeGroup=groups[0].id;
   document.getElementById('gf-dynamic').innerHTML=groups.map(g=>`
@@ -2490,7 +2604,12 @@ function renderDash(){
   const activeGroupName=activeGroupObj?activeGroupObj.name:'';
   const activeGroupColor=activeGroupObj?activeGroupObj.color:'var(--blue2)';
 
-  document.getElementById('dash-lbl').textContent='— '+PLABELS()[currentPeriod]+(activeGroupName?' · '+activeGroupName:'');
+  if(getCoachMode()==='individual'){
+    var _iSwLbl=getIndivSwimmer();
+    document.getElementById('dash-lbl').textContent='— '+PLABELS()[currentPeriod]+(_iSwLbl?' · '+_iSwLbl.firstName+' '+_iSwLbl.lastName:'');
+  } else {
+    document.getElementById('dash-lbl').textContent='— '+PLABELS()[currentPeriod]+(activeGroupName?' · '+activeGroupName:'');
+  }
 
   const ranges={day:getRange('day'),week:getRange('week'),month:getRange('month'),season:getRange('season')};
   const cls={day:'c-day',week:'c-week',month:'c-month',season:'c-season'};
@@ -4546,6 +4665,10 @@ function saveSeance(){
     rows:nonEmpty.map(r=>({...r})),
     savedAt:new Date().toISOString(),
   };
+  if(getCoachMode()==='individual'){
+    var _iSw=getIndivSwimmer();
+    if(_iSw)obj._swimmerId=_iSw.id;
+  }
   var _isNewSession=!(editingId&&DB.sessions.find(function(s){return s.id===editingId;}));
   if(editingId){
     const i=DB.sessions.findIndex(s=>s.id===editingId);
