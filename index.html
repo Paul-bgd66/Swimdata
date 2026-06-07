@@ -7557,6 +7557,23 @@ function renderSwimmerPerfs(){
 }
 function toggleSwAccordion(id){var el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}
 
+// ── Expose all try-block functions that are called from onclick HTML or from outside this block ──
+window.showNageurSection=showNageurSection;
+window.renderNageurManage=renderNageurManage;
+window.confirmDeleteSwimmerV2=confirmDeleteSwimmerV2;
+window.swimmersKey=swimmersKey;
+window.getSwimmers=getSwimmers;
+window.handleEswPhoto=handleEswPhoto;
+window.openEditSwimmerModal=openEditSwimmerModal;
+window.handleNswPhoto=handleNswPhoto;
+window.openAddSwimmerModal=openAddSwimmerModal;
+window.submitAddSwimmer=submitAddSwimmer;
+window.confirmDeleteSwimmer=confirmDeleteSwimmer;
+window.showSwimmerTab=showSwimmerTab;
+window.renderSwimmerGrid=renderSwimmerGrid;
+window.showSwimmerDetail=showSwimmerDetail;
+window.toggleSwAccordion=toggleSwAccordion;
+
 // Sinon l'écran coaches est déjà visible
 } catch(e) {
   document.body.innerHTML = '<div style="padding:20px;font-family:monospace;color:red"><b>ERREUR JS:</b><br>' + e.message + '<br><br>' + e.stack + '</div>';
