@@ -3964,10 +3964,14 @@ function renderVidSwimmerList(){
   const db=loadVDB();
   const el=document.getElementById('vid-swimmer-list');if(!el)return;
   const existingVidIds=db.swimmers.map(function(s){return s.id;});
+  var _vidChanged=false;
   getSwimmers().forEach(function(sw){
-    if(existingVidIds.indexOf(sw.id)===-1)
+    if(existingVidIds.indexOf(sw.id)===-1){
       db.swimmers.push({id:sw.id,prenom:sw.firstName,nom:sw.lastName,videos:[]});
+      _vidChanged=true;
+    }
   });
+  if(_vidChanged)saveVDB(db);
   if(!db.swimmers.length){
     el.innerHTML='<div style="color:var(--muted);font-size:.76rem;text-align:center;padding:12px">'+t('video.none')+'</div>';
     return;
@@ -7218,10 +7222,19 @@ function confirmDeleteSwimmerV2(swimmerId){
   var msg=document.getElementById('modal-delete-swimmer-msg');
   if(msg)msg.textContent='Supprimer '+sw.firstName+' '+sw.lastName+' ?';
   document.getElementById('modal-delete-swimmer-confirm').onclick=function(){
+    var wasActive=getCoachMode()==='individual'&&getCurrentSwimmerId()===swimmerId;
     deleteSwimmer(swimmerId);
     document.getElementById('modal-delete-swimmer').style.display='none';
     showToast('Nageur supprimé');
     renderNageurManage();
+    renderSwimmerManage();
+    if(getCoachMode()==='individual'){
+      if(wasActive){
+        var remaining=getSwimmers();
+        if(remaining.length){setCurrentSwimmerId(remaining[0].id);reloadDB();}
+      }
+      renderGFBar();
+    }
   };
   document.getElementById('modal-delete-swimmer').style.display='flex';
 }
@@ -7284,6 +7297,8 @@ function submitEditSwimmer(swimmerId){
   document.getElementById('modal-edit-swimmer').style.display='none';
   showToast('Nageur mis à jour');
   renderNageurManage();
+  renderSwimmerManage();
+  if(getCoachMode()==='individual')renderGFBar();
 }
 function deleteSwimmer(swimmerId){
   var arr=getSwimmers().filter(function(s){return s.id!==swimmerId;});
@@ -7322,10 +7337,16 @@ function submitAddSwimmer(){
   var nom=(document.getElementById('nsw-nom').value||'').trim();
   if(!prenom||!nom){showToast('Prénom et nom obligatoires');return;}
   var email=(document.getElementById('nsw-email').value||'').trim();
-  addSwimmer({firstName:prenom,lastName:nom,email:email,photo:_nswPhotoData});
+  var sw=addSwimmer({firstName:prenom,lastName:nom,email:email,photo:_nswPhotoData});
   document.getElementById('modal-add-swimmer').style.display='none';
   showToast(prenom+' '+nom+' ajouté(e)');
   renderSwimmerManage();
+  renderNageurManage();
+  if(getCoachMode()==='individual'){
+    var allSw=getSwimmers();
+    if(allSw.length===1){setCurrentSwimmerId(sw.id);reloadDB();}
+    renderGFBar();
+  }
 }
 function confirmDeleteSwimmer(swimmerId){
   var sw=getSwimmers().find(function(s){return s.id===swimmerId;});if(!sw)return;
