@@ -2452,6 +2452,11 @@ function setCoachMode(mode){
     _modeBadge.style.background=mode==='individual'?'rgba(33,118,232,.12)':'rgba(0,0,0,.06)';
     _modeBadge.style.color=mode==='individual'?'var(--blue2,#2176e8)':'var(--muted)';
   }
+  // Réinitialiser le nageur actif au premier de la nouvelle liste
+  var _newList=getSwimmers();
+  if(_newList.length){setCurrentSwimmerId(_newList[0].id);}
+  else if(currentCoachId){localStorage.removeItem('activeSwimmerId_'+currentCoachId);}
+  _indivSwimmerIdx=0;
   reloadDB();renderGFBar();reRenderCurrentPanel();renderSB();
 }
 function prevIndivSwimmer(){
@@ -5150,11 +5155,11 @@ function launchApp(coach){
   (function(){
     var _oldSwKey='swimmers_'+(currentCoachId||'default');
     var _existingSw=localStorage.getItem(_oldSwKey);
-    if(_existingSw){
-      if(!localStorage.getItem(_oldSwKey+'_club'))localStorage.setItem(_oldSwKey+'_club',_existingSw);
-      if(!localStorage.getItem(_oldSwKey+'_individual'))localStorage.setItem(_oldSwKey+'_individual','[]');
+    if(_existingSw&&!localStorage.getItem(_oldSwKey+'_club')){
+      localStorage.setItem(_oldSwKey+'_club',_existingSw);
       localStorage.removeItem(_oldSwKey);
     }
+    if(!localStorage.getItem(_oldSwKey+'_individual'))localStorage.setItem(_oldSwKey+'_individual','[]');
   })();
   window._userKey=userKey;
   window.svDB=function(){
