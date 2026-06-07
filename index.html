@@ -2496,7 +2496,7 @@ function renderGFBar(){
         ?'<span style="font-size:.75rem;color:rgba(255,255,255,.5)">Ajoutez des nageurs dans Gérer mes nageurs</span>'
         :'<div style="display:flex;align-items:center;gap:4px">'
           +'<button onclick="prevIndivSwimmer()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:0;color:#fff;cursor:pointer;font-size:.9rem;width:44px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">◀</button>'
-          +'<button onclick="openSwimmerPicker()" class="gf-btn on" style="cursor:pointer;display:flex;align-items:center;gap:5px;height:36px">'+(sw?sw.firstName+' '+sw.lastName:'—')+'<span style="font-size:.6rem;opacity:.7">▼</span></button>'
+          +'<button onclick="openSwimmerPicker()" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:6px 14px;font-weight:600;font-size:.82rem;cursor:pointer;display:flex;align-items:center;gap:5px;height:36px;font-family:\'DM Sans\',sans-serif">'+(sw?sw.firstName+' '+sw.lastName:'—')+'<span style="font-size:.6rem;opacity:.7">▼</span></button>'
           +'<button onclick="nextIndivSwimmer()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:0;color:#fff;cursor:pointer;font-size:.9rem;width:44px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">▶</button>'
           +'</div>';
     return;
@@ -3952,40 +3952,49 @@ function renderVideo(){
     const sw=db.swimmers.find(s=>s.id===activeVideoSwimmerId);
     if(sw) renderVidDetail(sw);
     else {activeVideoSwimmerId=null;renderVidDetailEmpty();}
-  } else if(db.swimmers.length>0){
-    activeVideoSwimmerId=db.swimmers[0].id;
-    renderVidDetail(db.swimmers[0]);
   } else {
-    renderVidDetailEmpty();
+    var _firstSw=getSwimmers()[0];
+    if(_firstSw){
+      activeVideoSwimmerId=_firstSw.id;
+      var _vSw=db.swimmers.find(function(s){return s.id===_firstSw.id;})||{id:_firstSw.id,prenom:_firstSw.firstName,nom:_firstSw.lastName,videos:[]};
+      renderVidDetail(_vSw);
+    } else {
+      renderVidDetailEmpty();
+    }
   }
 }
 
 function renderVidSwimmerList(){
   const db=loadVDB();
   const el=document.getElementById('vid-swimmer-list');if(!el)return;
+  const swimmers=getSwimmers();
+  // Ensure each current swimmer has a VDB entry so videos can be stored
   const existingVidIds=db.swimmers.map(function(s){return s.id;});
   var _vidChanged=false;
-  getSwimmers().forEach(function(sw){
+  swimmers.forEach(function(sw){
     if(existingVidIds.indexOf(sw.id)===-1){
       db.swimmers.push({id:sw.id,prenom:sw.firstName,nom:sw.lastName,videos:[]});
       _vidChanged=true;
     }
   });
   if(_vidChanged)saveVDB(db);
-  if(!db.swimmers.length){
+  if(!swimmers.length){
     el.innerHTML='<div style="color:var(--muted);font-size:.76rem;text-align:center;padding:12px">'+t('video.none')+'</div>';
     return;
   }
-  el.innerHTML=db.swimmers.map(sw=>`
-    <div class="vid-swimmer-item${sw.id===activeVideoSwimmerId?' active':''}" onclick="selectVideoSwimmer('${sw.id}')">
-      <div>
-        <div class="vid-swimmer-name">${sw.prenom} ${sw.nom}</div>
-        <div class="vid-swimmer-count">${sw.videos.length} ${sw.videos.length!==1?t('video.count.p'):t('video.count.s')}</div>
-      </div>
-      ${window._visitorMode?'':`<button class="vid-ann-del" style="font-size:.8rem" onclick="event.stopPropagation();delVideoSwimmer('${sw.id}')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-      </button>`}
-    </div>`).join('');
+  // Render only current mode's swimmers (not all VDB entries)
+  el.innerHTML=swimmers.map(function(sw){
+    var vSw=db.swimmers.find(function(s){return s.id===sw.id;})||{videos:[]};
+    return '<div class="vid-swimmer-item'+(sw.id===activeVideoSwimmerId?' active':'')+'" onclick="selectVideoSwimmer(\''+sw.id+'\')">'
+      +'<div>'
+        +'<div class="vid-swimmer-name">'+sw.firstName+' '+sw.lastName+'</div>'
+        +'<div class="vid-swimmer-count">'+vSw.videos.length+' '+(vSw.videos.length!==1?t('video.count.p'):t('video.count.s'))+'</div>'
+      +'</div>'
+      +(window._visitorMode?'':'<button class="vid-ann-del" style="font-size:.8rem" onclick="event.stopPropagation();delVideoSwimmer(\''+sw.id+'\')">'
+        +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>'
+        +'</button>')
+      +'</div>';
+  }).join('');
 }
 
 function renderVidDetailEmpty(){
@@ -5562,15 +5571,20 @@ function renderPerf(){
   var bassin=_perfBassin;
   var content=document.getElementById('perf-content');
   if(!content)return;
+  // Render only current mode's swimmers (not all Perf DB entries)
+  var _perfSwimmers=getSwimmers();
+  var _perfActiveNageurs=_perfSwimmers.map(function(sw){
+    return db.nageurs.find(function(n){return n.id===sw.id;})||{id:sw.id,nom:sw.firstName+' '+sw.lastName,performances:[]};
+  });
   // Sélecteur bassin
   content.innerHTML=
     '<div style="display:flex;gap:8px;margin-bottom:20px">'
       +'<button onclick="setPerfBassin(25)" style="flex:1;padding:10px;border-radius:8px;border:2px solid '+(bassin===25?'var(--blue2)':'var(--border)')+';background:'+(bassin===25?'rgba(33,118,232,.08)':'var(--bg)')+';font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;color:var(--text)">Bassin 25m</button>'
       +'<button onclick="setPerfBassin(50)" style="flex:1;padding:10px;border-radius:8px;border:2px solid '+(bassin===50?'var(--blue2)':'var(--border)')+';background:'+(bassin===50?'rgba(33,118,232,.08)':'var(--bg)')+';font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;color:var(--text)">Bassin 50m</button>'
     +'</div>'
-    +(db.nageurs.length===0
+    +(_perfActiveNageurs.length===0
       ?'<div style="text-align:center;padding:40px;color:var(--muted)">Aucun nageur enregistré</div>'
-      :db.nageurs.map(function(n){return renderPerfNageur(n,bassin);}).join('')
+      :_perfActiveNageurs.map(function(n){return renderPerfNageur(n,bassin);}).join('')
     );
 }
 
@@ -6468,6 +6482,10 @@ function renderHRVListe(){
   });
   const _v=window._visitorMode;
 
+  // Render only current mode's swimmers (not all HRV DB entries)
+  const _swNoms=getSwimmers().map(function(sw){return sw.firstName+' '+sw.lastName;});
+  const _activeNageurs=db.nageurs.filter(function(n){return _swNoms.indexOf(n.nom)!==-1;});
+
   let html=`
   <div class="seance-hdr" style="margin-bottom:14px">
     <div class="page-title">${t('hrv.title')} <span>${t('hrv.sub')}</span></div>
@@ -6480,11 +6498,11 @@ function renderHRVListe(){
   </div>
 
   <div id="hrv-nageur-list">
-    ${db.nageurs.length===0?
+    ${_activeNageurs.length===0?
     `<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center;color:var(--muted);font-size:.82rem">
       ${t('hrv.none')}${_v?'.':t('hrv.none.start')+"<b>"+t('hrv.add')+"</b>"+t('hrv.none.end')}
     </div>`:
-    db.nageurs.map(n=>{
+    _activeNageurs.map(n=>{
       const derniere=(n.historique||[]).slice(-1)[0];
       const color=hrvScoreColor(derniere?.note);
       return `<div class="hrv-nageur-row" style="margin-bottom:8px" onclick="hrvSelectNageur('${n.nom}')">
