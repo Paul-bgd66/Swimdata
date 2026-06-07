@@ -2452,10 +2452,6 @@ function setCoachMode(mode){
     _modeBadge.style.background=mode==='individual'?'rgba(33,118,232,.12)':'rgba(0,0,0,.06)';
     _modeBadge.style.color=mode==='individual'?'var(--blue2,#2176e8)':'var(--muted)';
   }
-  // Réinitialiser le nageur actif : supprime l'ID stocké → getCurrentSwimmerId()
-  // retombera automatiquement sur getSwimmers()[0] de la nouvelle liste
-  if(currentCoachId)localStorage.removeItem('activeSwimmerId_'+currentCoachId);
-  _indivSwimmerIdx=0;
   reloadDB();renderGFBar();reRenderCurrentPanel();renderSB();
 }
 function prevIndivSwimmer(){
