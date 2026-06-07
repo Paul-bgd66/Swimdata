@@ -578,7 +578,7 @@ body.visitor-mode .visitor-banner{display:flex}
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span id="snav-hrv-lbl">Suivi HRV</span>
         </div>
         <!-- MES NAGEURS — accordéon -->
-        <div class="sb-item" id="snav-swimmers" onclick="toggleSwimmersAccordion()" style="justify-content:space-between;cursor:pointer">
+        <div class="sb-item" id="snav-swimmers" onclick="(function(){var s=document.getElementById('snav-swimmers-sub');if(!s)return;var h=getComputedStyle(s).display==='none';s.style.display=h?'block':'none';var c=document.getElementById('snav-swimmers-chevron');if(c)c.style.transform=h?'rotate(90deg)':'';})();" style="justify-content:space-between;cursor:pointer">
           <span style="display:flex;align-items:center;gap:8px">
             <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
             <span id="snav-swimmers-lbl">Mes nageurs</span>
@@ -2452,7 +2452,15 @@ function setCoachMode(mode){
     _modeBadge.style.background=mode==='individual'?'rgba(33,118,232,.12)':'rgba(0,0,0,.06)';
     _modeBadge.style.color=mode==='individual'?'var(--blue2,#2176e8)':'var(--muted)';
   }
-  reloadDB();renderGFBar();renderSB();reRenderCurrentPanel();
+  reloadDB();
+  renderGFBar();
+  renderSB();
+  var _scmShown=document.querySelector('.panel.show');
+  if(_scmShown&&_scmShown.id==='panel-dash'){
+    try{renderDash();}catch(e){console.error('[setCoachMode]',e);}
+  } else {
+    try{reRenderCurrentPanel();}catch(e){console.error('[setCoachMode]',e);}
+  }
 }
 function prevIndivSwimmer(){
   var swimmers=getSwimmers();if(!swimmers.length)return;
