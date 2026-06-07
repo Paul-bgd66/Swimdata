@@ -2452,7 +2452,7 @@ function setCoachMode(mode){
     _modeBadge.style.background=mode==='individual'?'rgba(33,118,232,.12)':'rgba(0,0,0,.06)';
     _modeBadge.style.color=mode==='individual'?'var(--blue2,#2176e8)':'var(--muted)';
   }
-  reloadDB();renderGFBar();reRenderCurrentPanel();renderSB();
+  reloadDB();renderGFBar();renderSB();reRenderCurrentPanel();
 }
 function prevIndivSwimmer(){
   var swimmers=getSwimmers();if(!swimmers.length)return;
@@ -5191,14 +5191,6 @@ function launchApp(coach){
   renderGFBar();
   renderSB();
   selPeriod('week');
-  // iOS Safari : s'assurer que le tap sur Mes nageurs déclenche bien le toggle
-  (function(){
-    var _swEl=document.getElementById('snav-swimmers');
-    if(_swEl&&!_swEl._accBound){
-      _swEl._accBound=true;
-      _swEl.addEventListener('touchend',function(e){e.preventDefault();toggleSwimmersAccordion();},{passive:false});
-    }
-  })();
   // Merge séances Supabase → localStorage (fire-and-forget)
   var _mergeClubId=currentClub.id,_mergeCoachId=coach.id,_mergeKey=userKey;
   fetch('/api/sessions?clubId='+encodeURIComponent(_mergeClubId)+'&coachId='+encodeURIComponent(_mergeCoachId))
@@ -6952,7 +6944,7 @@ function updateSettingsLangUI(){
 function applyLangEverywhere(){
   var el;
   var gfl=document.getElementById('gf-group-label');
-  if(gfl)gfl.textContent=(_lang==='en'?'Group':_lang==='es'?'Grupo':'Groupe');
+  if(gfl)gfl.textContent=getCoachMode()==='individual'?'Nageur':(_lang==='en'?'Group':_lang==='es'?'Grupo':'Groupe');
 
   // ── Boucle générique data-i18n ──
   document.querySelectorAll('[data-i18n]').forEach(function(el){
