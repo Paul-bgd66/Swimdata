@@ -578,7 +578,7 @@ body.visitor-mode .visitor-banner{display:flex}
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span id="snav-hrv-lbl">Suivi HRV</span>
         </div>
         <!-- MES NAGEURS — accordéon -->
-        <div class="sb-item" id="snav-swimmers" onclick="toggleSwimmersAccordion()" style="justify-content:space-between">
+        <div class="sb-item" id="snav-swimmers" onclick="toggleSwimmersAccordion()" style="justify-content:space-between;cursor:pointer">
           <span style="display:flex;align-items:center;gap:8px">
             <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
             <span id="snav-swimmers-lbl">Mes nageurs</span>
@@ -5182,6 +5182,14 @@ function launchApp(coach){
   renderGFBar();
   renderSB();
   selPeriod('week');
+  // iOS Safari : s'assurer que le tap sur Mes nageurs déclenche bien le toggle
+  (function(){
+    var _swEl=document.getElementById('snav-swimmers');
+    if(_swEl&&!_swEl._accBound){
+      _swEl._accBound=true;
+      _swEl.addEventListener('touchend',function(e){e.preventDefault();toggleSwimmersAccordion();},{passive:false});
+    }
+  })();
   // Merge séances Supabase → localStorage (fire-and-forget)
   var _mergeClubId=currentClub.id,_mergeCoachId=coach.id,_mergeKey=userKey;
   fetch('/api/sessions?clubId='+encodeURIComponent(_mergeClubId)+'&coachId='+encodeURIComponent(_mergeCoachId))
@@ -7163,10 +7171,12 @@ if(session){
 function toggleSwimmersAccordion(){
   var sub=document.getElementById('snav-swimmers-sub');
   var ch=document.getElementById('snav-swimmers-chevron');
-  var open=sub&&sub.style.display!=='none';
-  if(sub)sub.style.display=open?'none':'block';
-  if(ch)ch.style.transform=open?'':'rotate(90deg)';
+  if(!sub)return;
+  var isHidden=(window.getComputedStyle?getComputedStyle(sub).display:sub.style.display)==='none';
+  sub.style.display=isHidden?'block':'none';
+  if(ch)ch.style.transform=isHidden?'rotate(90deg)':'';
 }
+window.toggleSwimmersAccordion=toggleSwimmersAccordion;
 
 var _nageurSubItems=['snav-sante','snav-nageur-perf','snav-nageur-video','snav-manage'];
 function showNageurSection(section){
