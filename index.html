@@ -2333,6 +2333,13 @@ function _onDistUnitChange(val){
   localStorage.setItem('distanceUnit',val);
   var s=document.getElementById('distunit-primary-section');
   if(s)s.style.display=val==='both'?'block':'none';
+  _updatePoolOptions();
+  try{renderDash();}catch(e){}
+  var _ps=document.getElementById('panel-seance');
+  if(_ps&&_ps.classList.contains('show')){
+    _currentSessionUnit=val==='yards'?'yards':'m';
+    try{renderGrid();}catch(e){}
+  }
 }
 function _updatePoolOptions(){
   var _sel=document.getElementById('s-pool');if(!_sel)return;
@@ -2351,11 +2358,11 @@ function setSessionUnit(u){
 }
 window.setSessionUnit=setSessionUnit;
 function fDistUnit(m){
-  if(_currentSessionUnit==='yards')return m+' <span style="font-family:DM Sans,sans-serif;font-size:.6em;font-weight:400;letter-spacing:0">yds</span>';
+  if(_currentSessionUnit==='yards')return m+'y';
   return fkmsH(m);
 }
 function fDistUnitInline(m){
-  if(_currentSessionUnit==='yards')return m+' yds';
+  if(_currentSessionUnit==='yards')return m+'y';
   return fkms(m);
 }
 function fkmsUnit(m,unit){
@@ -3479,7 +3486,7 @@ function updateTotals(){
   });
 
   // Barre total séance — intensités du groupe actif
-  document.getElementById('stb-total').innerHTML=totD>0?fDistUnit(totD):('0 '+(_currentSessionUnit==='yards'?'yds':'m'));
+  document.getElementById('stb-total').innerHTML=totD>0?fDistUnit(totD):(_currentSessionUnit==='yards'?'0y':'0 m');
   document.getElementById('stb-ints').innerHTML=
     INTS.filter(k=>totI[k]>0).map(k=>`
     <div class="stb-i">
