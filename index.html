@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --navy:#0b2550;--blue:#1560bd;--blue2:#2176e8;
+  --navy:#0b2550;--blue:#1560bd;--blue2:#2176e8;--card:#ffffff;
   --yellow:#f5c400;--yellow2:#ffe566;
   --bg:#eef2f8;--white:#fff;--border:#c5d3e5;
   --text:#0d1a33;--muted:#5a7494;
@@ -2499,14 +2499,15 @@ function renderGFBar(){
     var gfl=document.getElementById('gf-group-label');
     if(gfl)gfl.textContent='Nageur';
     if(manageBtn)manageBtn.style.display='none';
-    document.getElementById('gf-dynamic').innerHTML=
-      swimmers.length===0
+    var _gfHtml=swimmers.length===0
         ?'<span style="font-size:.75rem;color:rgba(255,255,255,.5)">Ajoutez des nageurs dans Gérer mes nageurs</span>'
         :'<div style="display:flex;align-items:center;gap:4px">'
           +'<button onclick="prevIndivSwimmer()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:0;color:#fff;cursor:pointer;font-size:.9rem;width:44px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">◀</button>'
           +'<button onclick="openSwimmerPicker()" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:6px 14px;font-weight:600;font-size:.82rem;cursor:pointer;display:flex;align-items:center;gap:5px;height:36px;font-family:\'DM Sans\',sans-serif">'+(sw?sw.firstName+' '+sw.lastName:'—')+'<span style="font-size:.6rem;opacity:.7">▼</span></button>'
           +'<button onclick="nextIndivSwimmer()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:0;color:#fff;cursor:pointer;font-size:.9rem;width:44px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">▶</button>'
           +'</div>';
+    document.getElementById('gf-dynamic').innerHTML=_gfHtml;
+    console.log('[renderGFBar] mode=individual swimmers='+swimmers.length+' html='+_gfHtml);
     return;
   }
   if(manageBtn)manageBtn.style.display='';
