@@ -1201,26 +1201,39 @@ body.visitor-mode .visitor-banner{display:flex}
         </div>
         <div id="sec-distunit" style="display:none;padding:16px;border-top:1px solid var(--border)">
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)">
-            <input type="radio" name="distanceUnit" value="m" id="du-m" onchange="localStorage.setItem('distanceUnit','m')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
+            <input type="radio" name="distanceUnit" value="m" id="du-m" onchange="_onDistUnitChange('m')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
             <div>
               <div style="font-size:.85rem;font-weight:600;color:var(--text)">Mètres uniquement</div>
               <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Comportement par défaut</div>
             </div>
           </label>
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)">
-            <input type="radio" name="distanceUnit" value="yards" id="du-yards" onchange="localStorage.setItem('distanceUnit','yards')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
+            <input type="radio" name="distanceUnit" value="yards" id="du-yards" onchange="_onDistUnitChange('yards')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
             <div>
               <div style="font-size:.85rem;font-weight:600;color:var(--text)">Yards uniquement</div>
               <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Saisie en yards — label "yds" dans la grille</div>
             </div>
           </label>
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg)">
-            <input type="radio" name="distanceUnit" value="both" id="du-both" onchange="localStorage.setItem('distanceUnit','both')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
+            <input type="radio" name="distanceUnit" value="both" id="du-both" onchange="_onDistUnitChange('both')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
             <div>
               <div style="font-size:.85rem;font-weight:600;color:var(--text)">Mètres + Yards</div>
-              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Toggle m / yds par séance — tableau de bord séparé</div>
+              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Toggle m / yds par séance — tableau de bord avec conversion</div>
             </div>
           </label>
+          <div id="distunit-primary-section" style="display:none;margin-top:12px;padding:12px;background:rgba(33,118,232,.05);border-radius:8px;border:1px solid rgba(33,118,232,.15)">
+            <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:8px">Unité principale</div>
+            <div style="display:flex;gap:16px">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="distanceUnitPrimary" value="m" id="dup-m" onchange="localStorage.setItem('distanceUnitPrimary','m')" style="accent-color:var(--blue2,#2176e8)">
+                <span style="font-size:.85rem;font-weight:600;color:var(--text)">Mètres</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="distanceUnitPrimary" value="yards" id="dup-yards" onchange="localStorage.setItem('distanceUnitPrimary','yards')" style="accent-color:var(--blue2,#2176e8)">
+                <span style="font-size:.85rem;font-weight:600;color:var(--text)">Yards</span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
       </div>
@@ -2147,6 +2160,11 @@ openIntSettings=function(){
   var _duVal=getDistUnit();
   var _duEl=document.getElementById('du-'+(_duVal==='yards'?'yards':_duVal==='both'?'both':'m'));
   if(_duEl)_duEl.checked=true;
+  var _dpSec=document.getElementById('distunit-primary-section');
+  if(_dpSec)_dpSec.style.display=_duVal==='both'?'block':'none';
+  var _dupVal=getDistUnitPrimary();
+  var _dupEl=document.getElementById('dup-'+(_dupVal==='yards'?'yards':'m'));
+  if(_dupEl)_dupEl.checked=true;
 };
 
 // ── APPARENCE — fonctions JS ──
@@ -2310,6 +2328,18 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const fd=d=>{const x=new Date(d);const y=x.getFullYear();const m=String(x.getMonth()+1).padStart(2,'0');const j=String(x.getDate()).padStart(2,'0');return`${y}-${m}-${j}`};
 const today=()=>{const n=new Date();const y=n.getFullYear();const m=String(n.getMonth()+1).padStart(2,'0');const j=String(n.getDate()).padStart(2,'0');return`${y}-${m}-${j}`};
 function getDistUnit(){return localStorage.getItem('distanceUnit')||'m';}
+function getDistUnitPrimary(){return localStorage.getItem('distanceUnitPrimary')||'m';}
+function _onDistUnitChange(val){
+  localStorage.setItem('distanceUnit',val);
+  var s=document.getElementById('distunit-primary-section');
+  if(s)s.style.display=val==='both'?'block':'none';
+}
+function _updatePoolOptions(){
+  var _sel=document.getElementById('s-pool');if(!_sel)return;
+  var _u=getDistUnit()==='m'?'m':'';
+  _sel.options[0].text='25'+_u;
+  if(_sel.options[1])_sel.options[1].text='50'+_u;
+}
 var _currentSessionUnit='m';
 function setSessionUnit(u){
   _currentSessionUnit=u;
@@ -2747,10 +2777,21 @@ function renderDash(){
     const n=_rangeArr.length;
     var _kmVal='';
     if(_du==='both'){
+      var _primary=getDistUnitPrimary();
       var _vM=_rangeArr.filter(function(s){return(s.unit||'m')==='m';}).reduce(function(a,s){return a+sDistFiltered(s);},0);
       var _vY=_rangeArr.filter(function(s){return s.unit==='yards';}).reduce(function(a,s){return a+sDistFiltered(s);},0);
-      _kmVal='<div class="km-val">'+fkmsH(_vM)+'</div>'
-        +'<div class="km-val" style="font-size:.85em;color:var(--c-adf)">'+_vY+' <span style="font-family:DM Sans,sans-serif;font-size:.6em;font-weight:400;letter-spacing:0">yds</span></div>';
+      var _totalPrimary,_totalOther;
+      if(_primary==='m'){
+        _totalPrimary=_vM+Math.round(_vY*0.9144);
+        _totalOther=Math.round(_totalPrimary*1.09361);
+      } else {
+        _totalPrimary=_vY+Math.round(_vM*1.09361);
+        _totalOther=Math.round(_totalPrimary*0.9144);
+      }
+      var _bigHtml=_primary==='m'?fkmsH(_totalPrimary):_totalPrimary+' <span style="font-family:DM Sans,sans-serif;font-size:.6em;font-weight:400;letter-spacing:0">yds</span>';
+      var _smallHtml='≈ '+(_primary==='m'?_totalOther+' yds':fkms(_totalOther));
+      _kmVal='<div class="km-val">'+_bigHtml+'</div>'
+        +'<div style="font-size:.75em;color:var(--muted);margin-top:2px">'+_smallHtml+'</div>';
     } else {
       _kmVal='<div class="km-val">'+fkmsH(v)+'</div>';
     }
@@ -3080,6 +3121,7 @@ function startNewSeance(){
   if(_saveBtn)_saveBtn.innerHTML='💾 Enregistrer';
   document.getElementById('s-date').value=today();
   document.getElementById('s-pool').value='25';
+  _updatePoolOptions();
   document.getElementById('seance-title').textContent=t('sess.new');
   rows=Array.from({length:10},()=>newRow());
   _currentSessionUnit=getDistUnit()==='yards'?'yards':'m';
@@ -3096,6 +3138,7 @@ function loadSeance(id){
   document.getElementById('s-name').value=s.name||'';
   document.getElementById('s-date').value=s.date;
   document.getElementById('s-pool').value=s.pool||'25';
+  _updatePoolOptions();
   document.getElementById('s-notes').value=s.notes||'';
   document.getElementById('seance-title').textContent=t('sess.edit')+(s.name||'Séance');
   rows=(s.rows||[]).map(r=>({...r}));
