@@ -2337,8 +2337,10 @@ function _onDistUnitChange(val){
   try{renderDash();}catch(e){}
   var _ps=document.getElementById('panel-seance');
   if(_ps&&_ps.classList.contains('show')){
-    _currentSessionUnit=val==='yards'?'yards':'m';
-    try{renderGrid();}catch(e){}
+    var _ut=document.getElementById('sess-unit-toggle');
+    if(_ut)_ut.style.display=val==='both'?'flex':'none';
+    var _newUnit=val==='yards'?'yards':'m';
+    try{setSessionUnit(_newUnit);}catch(e){}
   }
 }
 function _updatePoolOptions(){
