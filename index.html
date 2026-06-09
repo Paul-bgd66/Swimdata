@@ -953,6 +953,11 @@ body.visitor-mode .visitor-banner{display:flex}
 
       </div>
 
+      <div id="sess-unit-toggle" style="display:none;gap:0;margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content">
+        <button id="sess-unit-m" onclick="setSessionUnit('m')" style="padding:6px 18px;border:none;background:var(--navy);color:#fff;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;min-height:36px">m</button>
+        <button id="sess-unit-yds" onclick="setSessionUnit('yards')" style="padding:6px 18px;border:none;background:var(--white);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;min-height:36px">yds</button>
+      </div>
+
       <div class="hint" data-i18n-html="sess.hint">
         💡 Intensité en début de ligne : <b>AEC3 : 8x50</b> — sans intensité → <b>AEC1</b> par défaut.<br>
         <b>Entrée</b> pour aller à la ligne dans une série.
@@ -1177,6 +1182,43 @@ body.visitor-mode .visitor-banner{display:flex}
             <div>
               <div style="font-size:.85rem;font-weight:600;color:var(--text)">Coach particulier — séances par nageur</div>
               <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Séances assignées à un nageur spécifique</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- ACCORDÉON : UNITÉS DE DISTANCE -->
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+        <div onclick="toggleSettingsSection('sec-distunit')" style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;background:var(--bg);transition:background .15s;user-select:none" onmouseover="this.style.background='#e4eaf4'" onmouseout="this.style.background='var(--bg)'">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:1.1rem">📏</span>
+            <div>
+              <div style="font-size:.88rem;font-weight:600;color:var(--text)">Unités de distance</div>
+              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Mètres, yards ou les deux</div>
+            </div>
+          </div>
+          <span id="sec-distunit-arrow" style="font-size:.75rem;color:var(--muted);transition:transform .2s">▼</span>
+        </div>
+        <div id="sec-distunit" style="display:none;padding:16px;border-top:1px solid var(--border)">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)">
+            <input type="radio" name="distanceUnit" value="m" id="du-m" onchange="localStorage.setItem('distanceUnit','m')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
+            <div>
+              <div style="font-size:.85rem;font-weight:600;color:var(--text)">Mètres uniquement</div>
+              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Comportement par défaut</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)">
+            <input type="radio" name="distanceUnit" value="yards" id="du-yards" onchange="localStorage.setItem('distanceUnit','yards')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
+            <div>
+              <div style="font-size:.85rem;font-weight:600;color:var(--text)">Yards uniquement</div>
+              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Saisie en yards — label "yds" dans la grille</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg)">
+            <input type="radio" name="distanceUnit" value="both" id="du-both" onchange="localStorage.setItem('distanceUnit','both')" style="accent-color:var(--blue2,#2176e8);flex-shrink:0">
+            <div>
+              <div style="font-size:.85rem;font-weight:600;color:var(--text)">Mètres + Yards</div>
+              <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Toggle m / yds par séance — tableau de bord séparé</div>
             </div>
           </label>
         </div>
@@ -2102,6 +2144,9 @@ openIntSettings=function(){
   renderNageSettingsList();
   renderThemeGrid();
   populateAppearanceSection();
+  var _duVal=getDistUnit();
+  var _duEl=document.getElementById('du-'+(_duVal==='yards'?'yards':_duVal==='both'?'both':'m'));
+  if(_duEl)_duEl.checked=true;
 };
 
 // ── APPARENCE — fonctions JS ──
@@ -2264,6 +2309,29 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 // Formate une date en YYYY-MM-DD selon le fuseau local (pas UTC)
 const fd=d=>{const x=new Date(d);const y=x.getFullYear();const m=String(x.getMonth()+1).padStart(2,'0');const j=String(x.getDate()).padStart(2,'0');return`${y}-${m}-${j}`};
 const today=()=>{const n=new Date();const y=n.getFullYear();const m=String(n.getMonth()+1).padStart(2,'0');const j=String(n.getDate()).padStart(2,'0');return`${y}-${m}-${j}`};
+function getDistUnit(){return localStorage.getItem('distanceUnit')||'m';}
+var _currentSessionUnit='m';
+function setSessionUnit(u){
+  _currentSessionUnit=u;
+  var btnM=document.getElementById('sess-unit-m');
+  var btnY=document.getElementById('sess-unit-yds');
+  if(btnM){btnM.style.background=u==='m'?'var(--navy)':'var(--white)';btnM.style.color=u==='m'?'#fff':'var(--muted)';}
+  if(btnY){btnY.style.background=u==='yards'?'var(--navy)':'var(--white)';btnY.style.color=u==='yards'?'#fff':'var(--muted)';}
+  renderGrid();
+}
+window.setSessionUnit=setSessionUnit;
+function fDistUnit(m){
+  if(_currentSessionUnit==='yards')return m+' <span style="font-family:DM Sans,sans-serif;font-size:.6em;font-weight:400;letter-spacing:0">yds</span>';
+  return fkmsH(m);
+}
+function fDistUnitInline(m){
+  if(_currentSessionUnit==='yards')return m+' yds';
+  return fkms(m);
+}
+function fkmsUnit(m,unit){
+  if((unit||'m')==='yards')return m+' yds';
+  return fkms(m);
+}
 const fkm=m=>m>=1000?(m/1000).toFixed(2).replace('.',',')+' km':m+' m';
 const fkmH=m=>m>=1000?(m/1000).toFixed(2).replace('.',',')+' <span style="font-family:DM Sans,sans-serif;font-size:.6em;font-weight:400;letter-spacing:0">km</span>':m+' <span style="font-family:DM Sans,sans-serif;font-size:.6em;font-weight:400;letter-spacing:0">m</span>';
 const fkms=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':m+' m';
@@ -2672,12 +2740,23 @@ function renderDash(){
 
   const ranges={day:getRange('day'),week:getRange('week'),month:getRange('month'),season:getRange('season')};
   const cls={day:'c-day',week:'c-week',month:'c-month',season:'c-season'};
+  const _du=getDistUnit();
   const periodCards=Object.keys(ranges).map(p=>{
-    const v=sumKmFiltered(inRange(ranges[p].from,ranges[p].to));
-    const n=inRange(ranges[p].from,ranges[p].to).length;
+    const _rangeArr=inRange(ranges[p].from,ranges[p].to);
+    const v=sumKmFiltered(_rangeArr);
+    const n=_rangeArr.length;
+    var _kmVal='';
+    if(_du==='both'){
+      var _vM=_rangeArr.filter(function(s){return(s.unit||'m')==='m';}).reduce(function(a,s){return a+sDistFiltered(s);},0);
+      var _vY=_rangeArr.filter(function(s){return s.unit==='yards';}).reduce(function(a,s){return a+sDistFiltered(s);},0);
+      _kmVal='<div class="km-val">'+fkmsH(_vM)+'</div>'
+        +'<div class="km-val" style="font-size:.85em;color:var(--c-adf)">'+_vY+' <span style="font-family:DM Sans,sans-serif;font-size:.6em;font-weight:400;letter-spacing:0">yds</span></div>';
+    } else {
+      _kmVal='<div class="km-val">'+fkmsH(v)+'</div>';
+    }
     return`<div class="km-card ${cls[p]}" style="cursor:pointer" onclick="selPeriod('${p}')">
       <div class="km-lbl">${{day:t('dash.today'),week:t('dash.this.week'),month:t('dash.this.month'),season:t('dash.season')}[p]}</div>
-      <div class="km-val">${fkmsH(v)}</div>
+      ${_kmVal}
       <div class="km-sub">${n} ${n!==1?t('dash.sessions.plural'):t('dash.sessions')}</div>
     </div>`;
   }).join('');
@@ -2927,7 +3006,7 @@ function renderSessionTable(containerId, sessions){
       '<td>'+new Date(s.date+'T12:00').toLocaleDateString(currentLocale(),{weekday:'short',day:'2-digit',month:'short'})+'</td>'+
       '<td class="td-name">'+esc(s.name||'—')+'</td>'+
       '<td>'+(s.pool?s.pool+'m':'—')+'</td>'+
-      '<td class="td-km">'+fkms(sDistFiltered(s))+'</td>'+
+      '<td class="td-km">'+fkmsUnit(sDistFiltered(s),s.unit)+'</td>'+
       '<td>'+(intBadges(s)||'—')+'</td>'+
       '<td>'+actions+'</td>'+
     '</tr>';
@@ -3003,6 +3082,9 @@ function startNewSeance(){
   document.getElementById('s-pool').value='25';
   document.getElementById('seance-title').textContent=t('sess.new');
   rows=Array.from({length:10},()=>newRow());
+  _currentSessionUnit=getDistUnit()==='yards'?'yards':'m';
+  var _ut=document.getElementById('sess-unit-toggle');
+  if(_ut){_ut.style.display=getDistUnit()==='both'?'flex':'none';if(getDistUnit()==='both')setSessionUnit('m');}
   renderGrid();
   showPanel('seance');
   document.getElementById('snav-hist')&&document.getElementById('snav-hist').classList.remove('active');
@@ -3018,6 +3100,9 @@ function loadSeance(id){
   document.getElementById('seance-title').textContent=t('sess.edit')+(s.name||'Séance');
   rows=(s.rows||[]).map(r=>({...r}));
   while(rows.length<10)rows.push(newRow());
+  _currentSessionUnit=s.unit||'m';
+  var _utL=document.getElementById('sess-unit-toggle');
+  if(_utL){_utL.style.display=getDistUnit()==='both'?'flex':'none';if(getDistUnit()==='both')setSessionUnit(_currentSessionUnit);}
   renderGrid();
   showPanel('seance');
   var saveBtn=document.getElementById('seance-save-btn');
@@ -3284,7 +3369,7 @@ function renderGrid(){
     xhead.innerHTML='<tr>'+
       '<th style="width:26px">#</th>'+
       '<th class="th-desc">'+t('sess.desc')+'</th>'+
-      '<th style="width:68px">'+t('sess.dist')+'</th>'+
+      '<th style="width:68px">'+(_currentSessionUnit==='yards'?'yds':t('sess.dist'))+'</th>'+
       INTS.map(function(k){return '<th class="th-int" style="width:62px">'+ILABELS[k]+'</th>';}).join('')+
       '<th class="th-tot" style="width:74px">'+t('sess.total.col')+'</th>'+
       '<th style="width:24px"></th>'+
@@ -3318,7 +3403,7 @@ function renderGrid(){
         style="color:${r[k]?ICOLORS[k]:'inherit'}"
         title="${ILABELS[k]}"
         oninput="onIntChange('${r.id}','${k}',this.value)"></td>`).join('')}
-      <td><div class="xcell-ro" id="xrt-${r.id}">${dist>0?fkmsH(dist):''}</div></td>
+      <td><div class="xcell-ro" id="xrt-${r.id}">${dist>0?fDistUnit(dist):''}</div></td>
       <td class="xrd" style="white-space:nowrap;vertical-align:top;padding:4px 2px">
         <button id="xrst-${r.id}" class="del-btn"
           style="color:var(--yellow);display:${hasOverride?'inline-block':'none'};margin-bottom:2px"
@@ -3347,11 +3432,11 @@ function updateTotals(){
   // Totaux par ligne — chaque ligne affiche sa propre distance
   rows.forEach(r=>{
     const rt=document.getElementById('xrt-'+r.id);
-    if(rt)rt.innerHTML=(parseInt(r.dist)||0)>0?fkmsH(parseInt(r.dist)):'';
+    if(rt)rt.innerHTML=(parseInt(r.dist)||0)>0?fDistUnit(parseInt(r.dist)):'';
   });
 
   // Barre total séance — intensités du groupe actif
-  document.getElementById('stb-total').innerHTML=totD>0?fkmH(totD):'0 m';
+  document.getElementById('stb-total').innerHTML=totD>0?fDistUnit(totD):('0 '+(_currentSessionUnit==='yards'?'yds':'m'));
   document.getElementById('stb-ints').innerHTML=
     INTS.filter(k=>totI[k]>0).map(k=>`
     <div class="stb-i">
@@ -4743,6 +4828,7 @@ function saveSeance(){
     pool:document.getElementById('s-pool').value,
     notes:document.getElementById('s-notes').value,
     rows:nonEmpty.map(r=>({...r})),
+    unit:_currentSessionUnit,
     savedAt:new Date().toISOString(),
   };
   var _isNewSession=!(editingId&&DB.sessions.find(function(s){return s.id===editingId;}));
