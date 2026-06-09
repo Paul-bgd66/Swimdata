@@ -551,7 +551,7 @@ body.visitor-mode .visitor-banner{display:flex}
 
 <div class="gfbar" id="gfbar" ontouchstart="_gfbarTouchStart(event)" ontouchend="_gfbarTouchEnd(event)">
   <span class="gf-lbl" id="gf-group-label" style="font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;margin-right:6px;font-weight:700">Groupe</span>
-  <span id="gf-dynamic"></span>
+  <div id="gf-dynamic" style="display:flex;align-items:center"></div>
   <button class="gf-btn manage visitor-hide" onclick="openGroupSettings()" data-i18n="groups.manage">⚙ Gérer</button>
 </div>
 <div class="layout">
@@ -7319,9 +7319,9 @@ function submitAddSwimmer(){
   var email=(document.getElementById('nsw-email').value||'').trim();
   var sw=addSwimmer({firstName:prenom,lastName:nom,email:email,photo:_nswPhotoData});
   document.getElementById('modal-add-swimmer').style.display='none';
+  renderNageurManage();
   showToast(prenom+' '+nom+' ajouté(e)');
   renderSwimmerManage();
-  renderNageurManage();
   if(getCoachMode()==='individual'){
     var allSw=getSwimmers();
     if(allSw.length===1){setCurrentSwimmerId(sw.id);reloadDB();}
@@ -7335,7 +7335,9 @@ function confirmDeleteSwimmer(swimmerId){
   document.getElementById('modal-delete-swimmer-confirm').onclick=function(){
     deleteSwimmer(swimmerId);
     document.getElementById('modal-delete-swimmer').style.display='none';
-    showToast('Nageur supprimé');renderSwimmerManage();
+    renderNageurManage();
+    showToast('Nageur supprimé');
+    renderSwimmerManage();
   };
   document.getElementById('modal-delete-swimmer').style.display='flex';
 }
