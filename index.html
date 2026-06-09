@@ -2458,6 +2458,8 @@ function setCoachMode(mode){
   var _scmShown=document.querySelector('.panel.show');
   if(_scmShown&&_scmShown.id==='panel-dash'){
     try{renderDash();}catch(e){console.error('[setCoachMode]',e);}
+  } else if(_scmShown&&_scmShown.id==='panel-manage'){
+    try{renderNageurManage();}catch(e){console.error('[setCoachMode]',e);}
   } else {
     try{reRenderCurrentPanel();}catch(e){console.error('[setCoachMode]',e);}
   }
