@@ -7134,54 +7134,6 @@ updateLangSelectorUI();
 applyLangEverywhere();
 
 
-// ── INIT ──
-try {
-initDefaultClubs();
-
-// Charge directement Canet 66 (pas d'écran de choix club pour l'instant)
-function loadCanet66(){
-  const clubs=getClubs();
-  // Trouve ou recrée Canet 66
-  let club=clubs.find(c=>c.name.toLowerCase().includes('canet'));
-  if(!club){
-    club={
-      id:'canet66',
-      name:'canet66',
-      shortName:'C66',
-      color1:'#1560bd',
-      color2:'#f5c400',
-      theme:'default',
-      customColor1:null,
-      customColor2:null,
-      logoData:null,
-      hash:hashPass('Swimcanet66'),
-      email:'',
-      coaches:[]
-    };
-    clubs.push(club);
-    saveClubs(clubs);
-  }
-  currentClub=club;
-  return club;
-}
-
-const session=getSession();
-if(session){
-  const clubs=getClubs();
-  const club=clubs.find(c=>c.id===session.clubId);
-  const coach=(club ? club.coaches.find(function(c){return c.id===session.coachId;}) : null);
-  if(club&&coach){
-    currentClub=club;currentCoachId=coach.id;
-    launchApp(coach);
-  } else {
-    clearSession();
-    loadCanet66();
-    showScreen('screen-splash');
-  }
-} else {
-  loadCanet66();
-  showScreen('screen-splash');
-}
 // ════════════════════════════════
 // MES NAGEURS — accordéon sidebar + navigation
 // ════════════════════════════════
@@ -7574,6 +7526,54 @@ window.renderSwimmerGrid=renderSwimmerGrid;
 window.showSwimmerDetail=showSwimmerDetail;
 window.toggleSwAccordion=toggleSwAccordion;
 
+// ── INIT ──
+try {
+initDefaultClubs();
+
+// Charge directement Canet 66 (pas d'écran de choix club pour l'instant)
+function loadCanet66(){
+  const clubs=getClubs();
+  // Trouve ou recrée Canet 66
+  let club=clubs.find(c=>c.name.toLowerCase().includes('canet'));
+  if(!club){
+    club={
+      id:'canet66',
+      name:'canet66',
+      shortName:'C66',
+      color1:'#1560bd',
+      color2:'#f5c400',
+      theme:'default',
+      customColor1:null,
+      customColor2:null,
+      logoData:null,
+      hash:hashPass('Swimcanet66'),
+      email:'',
+      coaches:[]
+    };
+    clubs.push(club);
+    saveClubs(clubs);
+  }
+  currentClub=club;
+  return club;
+}
+
+const session=getSession();
+if(session){
+  const clubs=getClubs();
+  const club=clubs.find(c=>c.id===session.clubId);
+  const coach=(club ? club.coaches.find(function(c){return c.id===session.coachId;}) : null);
+  if(club&&coach){
+    currentClub=club;currentCoachId=coach.id;
+    launchApp(coach);
+  } else {
+    clearSession();
+    loadCanet66();
+    showScreen('screen-splash');
+  }
+} else {
+  loadCanet66();
+  showScreen('screen-splash');
+}
 // Sinon l'écran coaches est déjà visible
 } catch(e) {
   document.body.innerHTML = '<div style="padding:20px;font-family:monospace;color:red"><b>ERREUR JS:</b><br>' + e.message + '<br><br>' + e.stack + '</div>';
