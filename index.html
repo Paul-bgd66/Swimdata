@@ -1323,36 +1323,13 @@ body.visitor-mode .visitor-banner{display:flex}
 </div>
 
 <!-- ÉCRAN SPLASH SWIMDATA -->
-<div class="auth-screen" id="screen-splash">
-  <div style="position:absolute;top:16px;right:16px;display:flex;gap:4px" id="lang-selector-splash">
-    <button onclick="switchLang('fr')" id="splash-lang-fr" style="background:rgba(255,255,255,.15);border:2px solid #fff;border-radius:6px;padding:4px 8px;font-size:1rem;cursor:pointer;line-height:1">🇫🇷</button>
-    <button onclick="switchLang('en')" id="splash-lang-en" style="background:rgba(255,255,255,.06);border:2px solid transparent;border-radius:6px;padding:4px 8px;font-size:1rem;cursor:pointer;line-height:1">🇬🇧</button>
-    <button onclick="switchLang('es')" id="splash-lang-es" style="background:rgba(255,255,255,.06);border:2px solid transparent;border-radius:6px;padding:4px 8px;font-size:1rem;cursor:pointer;line-height:1">🇪🇸</button>
-  </div>
-  <div style="text-align:center;max-width:400px">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:3.5rem;letter-spacing:8px;color:#fff;margin-bottom:4px">SWIM<span style="color:#999">DATA</span></div>
-    <div style="font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:60px" id="splash-tagline">La plateforme des coachs de natation</div>
-    <button onclick="showScreen('screen-club')" style="width:100%;background:#fff;color:#000;border:none;border-radius:10px;padding:14px;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer;margin-bottom:12px;transition:opacity .2s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" id="splash-login-btn">S'IDENTIFIER</button>
-    <button onclick="showCreateAccountPanel()" style="width:100%;background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:14px;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,255,255,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)'" id="splash-create-btn">CRÉER UN COMPTE</button>
-  </div>
-  <!-- Panneau "accès impossible" -->
-  <div id="splash-create-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10;align-items:center;justify-content:center;padding:20px">
-    <div style="background:#111;border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:32px;max-width:380px;width:100%;text-align:center">
-      <div style="font-size:2rem;margin-bottom:16px">🚧</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:2px;color:#fff;margin-bottom:10px" id="splash-blocked-title">Bientôt disponible</div>
-      <div style="font-size:.85rem;color:rgba(255,255,255,.4);line-height:1.6;margin-bottom:24px" id="splash-blocked-msg">La création de compte n'est pas encore disponible. Contactez-nous pour obtenir un accès.</div>
-      <button onclick="hideCreateAccountPanel()" style="background:#fff;color:#000;border:none;border-radius:8px;padding:10px 24px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;cursor:pointer" id="splash-blocked-ok">COMPRIS</button>
-    </div>
-  </div>
-</div>
-
 <div class="auth-screen hidden" id="screen-club" style="background:#000">
   <div style="position:absolute;top:16px;right:16px;display:flex;gap:4px" id="lang-selector-home">
     <button onclick="switchLang('fr')" id="lang-btn-fr" style="background:rgba(255,255,255,.15);border:2px solid #fff;border-radius:6px;padding:4px 8px;font-size:1rem;cursor:pointer;line-height:1">🇫🇷</button>
     <button onclick="switchLang('en')" id="lang-btn-en" style="background:rgba(255,255,255,.06);border:2px solid transparent;border-radius:6px;padding:4px 8px;font-size:1rem;cursor:pointer;line-height:1">🇬🇧</button>
     <button onclick="switchLang('es')" id="lang-btn-es" style="background:rgba(255,255,255,.06);border:2px solid transparent;border-radius:6px;padding:4px 8px;font-size:1rem;cursor:pointer;line-height:1">🇪🇸</button>
   </div>
-  <div class="auth-back" onclick="showScreen('screen-splash')" id="back-to-splash" data-i18n="splash.back">← Retour</div>
+  <div class="auth-back" onclick="window.location.href='/login.html'" id="back-to-splash" data-i18n="splash.back">← Retour</div>
   <div class="auth-logo">SwimData</div>
   <div class="auth-tagline" id="auth-tagline">La plateforme des coachs de natation</div>
   <div class="auth-card">
@@ -5993,12 +5970,8 @@ function logout(){
   const btnStart=document.querySelector('.btn-new-seance');
   if(btnStart){btnStart.style.opacity='';btnStart.style.pointerEvents='';btnStart.title='';}
   currentCoachId=null;
-  // currentClub conservé pour réafficher la liste des coachs
-  if(currentClub){
-    showCoachScreen(currentClub);
-  } else {
-    showScreen('screen-splash');
-  }
+  currentClub=null;
+  window.location.href='/login.html';
 }
 
 document.addEventListener('click',function(e){
@@ -7768,47 +7741,9 @@ window.toggleSwAccordion=toggleSwAccordion;
 try {
 initDefaultClubs();
 
-// Charge directement Canet 66 (pas d'écran de choix club pour l'instant)
-function loadCanet66(){
-  const clubs=getClubs();
-  // Trouve ou recrée Canet 66
-  let club=clubs.find(c=>c.name.toLowerCase().includes('canet'));
-  if(!club){
-    club={
-      id:'canet66',
-      name:'canet66',
-      shortName:'C66',
-      color1:'#1560bd',
-      color2:'#f5c400',
-      theme:'default',
-      customColor1:null,
-      customColor2:null,
-      logoData:null,
-      hash:hashPass('Swimcanet66'),
-      email:'',
-      coaches:[]
-    };
-    clubs.push(club);
-    saveClubs(clubs);
-  }
-  currentClub=club;
-  return club;
-}
-
 (async function _authInit(){
-  // Fallback : Supabase non configuré → ancien flow splash
-  if(!_supabase){
-    const session=getSession();
-    if(session){
-      const clubs=getClubs();
-      const club=clubs.find(c=>c.id===session.clubId);
-      const coach=(club?club.coaches.find(function(c){return c.id===session.coachId;}):null);
-      if(club&&coach){currentClub=club;currentCoachId=coach.id;launchApp(coach);return;}
-      clearSession();
-    }
-    loadCanet66();showScreen('screen-splash');return;
-  }
-  // Supabase Auth
+  // Pas de Supabase → redirect login
+  if(!_supabase){window.location.href='/login.html';return;}
   var _sbRes=null;
   try{_sbRes=await _supabase.auth.getSession();}catch(e){console.warn('[auth] Supabase unreachable:',e.message);}
   var _sbSession=_sbRes&&_sbRes.data&&_sbRes.data.session||null;
@@ -7817,33 +7752,33 @@ function loadCanet66(){
   var _meta=_user.user_metadata||{};
   // Nageur → swimmer.html
   if(_meta.role==='swimmer'){window.location.href='/swimmer.html';return;}
-  // Trouve/crée le club selon clubName du metadata (fallback : Canet 66)
-  var _clubName=(_meta.clubName||'').trim();
-  var _club=null;
-  if(_clubName){
-    var _clubs=getClubs();
-    _club=_clubs.find(function(c){return c.name.toLowerCase()===_clubName.toLowerCase();});
-    if(!_club){
-      _club={
-        id:_clubName.toLowerCase().replace(/[^a-z0-9]/g,'')||('club'+Date.now()),
-        name:_clubName,
-        shortName:_clubName.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,4)||_clubName.slice(0,4).toUpperCase(),
-        color1:'#1560bd',color2:'#f5c400',theme:'default',
-        customColor1:null,customColor2:null,logoData:null,
-        hash:'',email:'',coaches:[]
-      };
-      _clubs.push(_club);saveClubs(_clubs);
-    }
-    currentClub=_club;
-  } else {
-    _club=loadCanet66();
-  }
-  // Construit le coach à partir de Supabase user (id = user.id)
+  // Identité coach depuis Supabase
+  var _firstName=(_meta.firstName||'').trim();
+  var _lastName=(_meta.lastName||'').trim();
   var _emailPrefix=(_user.email||'coach').split('@')[0];
-  var _coachName=_meta.coachName||_emailPrefix;
+  var _coachName=(_firstName+' '+_lastName).trim()||_emailPrefix;
+  // Club depuis user_metadata.clubName (fallback : nom du coach)
+  var _clubName=(_meta.clubName||'').trim()||(_coachName+' Club');
+  var _clubs=getClubs();
+  var _club=_clubs.find(function(c){return c.name.toLowerCase()===_clubName.toLowerCase();});
+  if(!_club){
+    _club={
+      id:_clubName.toLowerCase().replace(/[^a-z0-9]/g,'')||('club'+Date.now()),
+      name:_clubName,
+      shortName:_clubName.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,4)||_clubName.slice(0,4).toUpperCase(),
+      color1:'#1560bd',color2:'#f5c400',theme:'default',
+      customColor1:null,customColor2:null,logoData:null,
+      hash:'',email:'',coaches:[]
+    };
+    _clubs.push(_club);saveClubs(_clubs);
+  }
+  currentClub=_club;
+  // Construit le coach à partir de Supabase user (id = user.id)
   var _coach={
     id:_user.id,
     name:_coachName,
+    firstname:_firstName,
+    lastname:_lastName,
     initials:getInitials(_coachName),
     email:_user.email||'',
     role:_meta.role==='manager'?'manager':'coach',
@@ -7854,7 +7789,6 @@ function loadCanet66(){
   currentCoachId=_coach.id;
   launchApp(_coach);
 })();
-// Sinon l'écran coaches est déjà visible
 } catch(e) {
   document.body.innerHTML = '<div style="padding:20px;font-family:monospace;color:red"><b>ERREUR JS:</b><br>' + e.message + '<br><br>' + e.stack + '</div>';
 }

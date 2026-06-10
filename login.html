@@ -118,8 +118,8 @@
 
   <!-- ÉTAT 1 : ACCUEIL -->
   <div class="state active" id="state-home">
-    <button class="btn btn-primary" onclick="showState('signup')">S'INSCRIRE</button>
-    <button class="btn btn-outline" onclick="showState('login')">SE CONNECTER</button>
+    <button class="btn btn-primary" onclick="showState('login')">SE CONNECTER</button>
+    <button class="btn btn-outline" onclick="showState('signup')">S'INSCRIRE</button>
   </div>
 
   <!-- ÉTAT 2 : SE CONNECTER -->
@@ -143,12 +143,16 @@
 
   <!-- ÉTAT 3 : S'INSCRIRE -->
   <div class="state" id="state-signup">
+    <div class="field-label">Prénom</div>
+    <input type="text" id="signup-firstname" placeholder="Prénom" autocomplete="given-name">
+    <div class="field-label">Nom</div>
+    <input type="text" id="signup-lastname" placeholder="Nom" autocomplete="family-name">
+    <div class="field-label">Nom du club</div>
+    <input type="text" id="signup-club" placeholder="ex: Canet 66 Natation">
     <div class="field-label">Email</div>
     <input type="email" id="signup-email" placeholder="coach@monclub.fr" autocomplete="email">
     <div class="field-label">Mot de passe</div>
     <input type="password" id="signup-password" placeholder="Minimum 6 caractères" autocomplete="new-password">
-    <div class="field-label">Nom du club</div>
-    <input type="text" id="signup-club" placeholder="ex: Canet 66 Natation">
     <div class="msg" id="signup-msg"></div>
     <button class="btn btn-primary" id="signup-btn" onclick="submitSignup()">CRÉER MON COMPTE</button>
     <button class="link-btn back-link" onclick="showState('home')">← Retour</button>
@@ -194,9 +198,11 @@ async function submitLogin(){
 }
 
 async function submitSignup(){
-  var email = document.getElementById('signup-email').value.trim();
-  var password = document.getElementById('signup-password').value;
-  var clubName = document.getElementById('signup-club').value.trim();
+  var firstName = document.getElementById('signup-firstname').value.trim();
+  var lastName  = document.getElementById('signup-lastname').value.trim();
+  var clubName  = document.getElementById('signup-club').value.trim();
+  var email     = document.getElementById('signup-email').value.trim();
+  var password  = document.getElementById('signup-password').value;
   var msg = document.getElementById('signup-msg');
   var btn = document.getElementById('signup-btn');
   msg.className='msg err';msg.textContent='';
@@ -206,7 +212,7 @@ async function submitSignup(){
   btn.textContent = 'CRÉATION…';
   var res = await _sb.auth.signUp({
     email:email, password:password,
-    options:{data:{role:'coach', clubName:clubName||''}}
+    options:{data:{role:'coach', firstName:firstName, lastName:lastName, clubName:clubName}}
   });
   btn.disabled = false;
   btn.textContent = 'CRÉER MON COMPTE';
@@ -216,7 +222,7 @@ async function submitSignup(){
     return;
   }
   msg.className='msg ok';
-  msg.textContent = 'Email de confirmation envoyé à ' + email;
+  msg.textContent = '✅ Email de confirmation envoyé à ' + email;
 }
 
 function toggleForgot(){
