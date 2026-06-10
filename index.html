@@ -1251,6 +1251,15 @@ body.visitor-mode .visitor-banner{display:flex}
           <span id="sec-compte-arrow" style="font-size:.75rem;color:var(--muted);transition:transform .2s">▼</span>
         </div>
         <div id="sec-compte" style="display:none;padding:16px;border-top:1px solid var(--border)">
+          <!-- Inviter un coach -->
+          <div style="padding:14px;background:rgba(33,118,232,.05);border:1px solid rgba(33,118,232,.15);border-radius:10px;margin-bottom:10px">
+            <div style="font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:10px">✉️ Inviter un coach</div>
+            <div style="display:flex;gap:8px;margin-bottom:6px">
+              <input id="invite-coach-email" type="email" placeholder="coach@monclub.fr" style="flex:1;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.88rem;box-sizing:border-box;background:var(--bg,#f8fafc)">
+              <button onclick="inviterCoachSupabase()" style="padding:9px 14px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;white-space:nowrap;min-height:44px">Inviter</button>
+            </div>
+            <div id="invite-coach-msg" style="font-size:.75rem;min-height:16px"></div>
+          </div>
           <button onclick="openCreateCoachModal()" style="width:100%;padding:11px;border-radius:8px;border:1.5px solid var(--blue2,#2176e8);background:rgba(33,118,232,.07);color:var(--blue2,#2176e8);font-size:.85rem;font-weight:600;cursor:pointer;margin-bottom:10px">➕ Créer un compte coach</button>
           <button onclick="_supabaseSignOut()" style="width:100%;padding:11px;border-radius:8px;border:1.5px solid #ef4444;background:rgba(239,68,68,.07);color:#ef4444;font-size:.85rem;font-weight:600;cursor:pointer">🚪 Se déconnecter</button>
         </div>
@@ -5328,8 +5337,9 @@ function launchApp(coach){
     }
   };
   DB.coach={name:coach.name,initials:coach.initials||getInitials(coach.name)};
-  // Header
-  document.getElementById('coach-av').textContent=coach.initials||getInitials(coach.name);
+  // Header — avatar affiche le club (shortName), nom du coach à droite
+  var _clubLabel=(currentClub&&(currentClub.shortName||currentClub.name))||'';
+  document.getElementById('coach-av').textContent=_clubLabel?_clubLabel.slice(0,3).toUpperCase():(coach.initials||getInitials(coach.name));
   document.getElementById('coach-nm').textContent=coach.name+(coach.role==='manager'?' ⭐':'');
   document.getElementById('lm-name').textContent=coach.name;
   document.getElementById('lm-email').textContent=(currentClub ? currentClub.name : '');
@@ -6023,15 +6033,111 @@ async function submitCreateCoachSupabase(){
 
 // ── INVITATION NAGEUR (Supabase) ──
 async function inviterNageurSupabase(){
+  var fnEl=document.getElementById('invite-nageur-firstname');
+  var lnEl=document.getElementById('invite-nageur-lastname');
   var inp=document.getElementById('invite-nageur-email');
   if(!inp)return;
+  var firstName=fnEl?fnEl.value.trim():'';
+  var lastName=lnEl?lnEl.value.trim():'';
   var email=inp.value.trim();
   var msgEl=document.getElementById('invite-nageur-msg');
+  if(!firstName||!lastName||!email){
+    if(msgEl){msgEl.textContent='Prénom, nom et email requis';msgEl.style.color='#ef4444';}
+    return;
+  }
+  if(msgEl){msgEl.textContent='Envoi en cours…';msgEl.style.color='var(--muted)';}
+  try{
+    var r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:email,role:'swimmer',coachId:currentCoachId||'',clubId:(currentClub&&currentClub.id)||'',firstName:firstName,lastName:lastName})});
+    var d=await r.json();
+    if(!r.ok||d.error){if(msgEl){msgEl.textContent=d.error||'Erreur';msgEl.style.color='#ef4444';}return;}
+    if(msgEl){msgEl.textContent='✅ Invitation envoyée à '+email;msgEl.style.color='#16a34a';}
+    if(fnEl)fnEl.value='';if(lnEl)lnEl.value='';inp.value='';
+  }catch(e){if(msgEl){msgEl.textContent='Erreur réseau';msgEl.style.color='#ef4444';}}
+}
+
+// ── ONBOARDING (premier login) ──
+function _shouldShowOnboarding(user){
+  if(!currentClub)return false;
+  var done=user&&user.user_metadata&&user.user_metadata.onboardingDone===true;
+  if(done)return false;
+  // Si déjà personnalisé localement, on saute aussi
+  if(currentClub.logoData||currentClub.customColor1||currentClub.customColor2)return false;
+  return true;
+}
+function _openOnboarding(){
+  // Réinitialise les champs aux couleurs par défaut
+  var c1=document.getElementById('ob-color1'),c1t=document.getElementById('ob-color1-text');
+  var c2=document.getElementById('ob-color2'),c2t=document.getElementById('ob-color2-text');
+  if(c1)c1.value='#1560bd';if(c1t)c1t.value='#1560bd';
+  if(c2)c2.value='#f5c400';if(c2t)c2t.value='#f5c400';
+  var prev=document.getElementById('ob-logo-preview');
+  if(prev){prev.src='';prev.style.display='none';}
+  window._obLogoData=null;
+  var msg=document.getElementById('ob-msg');if(msg){msg.textContent='';msg.style.color='';}
+  var ov=document.getElementById('modal-onboarding');
+  if(ov)ov.style.display='flex';
+}
+function _obHandleLogo(file){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    window._obLogoData=e.target.result;
+    var prev=document.getElementById('ob-logo-preview');
+    if(prev){prev.src=e.target.result;prev.style.display='block';}
+  };
+  reader.readAsDataURL(file);
+}
+async function _completeOnboarding(){
+  var c1=document.getElementById('ob-color1');
+  var c2=document.getElementById('ob-color2');
+  var c1t=document.getElementById('ob-color1-text');
+  var c2t=document.getElementById('ob-color2-text');
+  var col1=(c1t&&c1t.value)||(c1&&c1.value)||'';
+  var col2=(c2t&&c2t.value)||(c2&&c2.value)||'';
+  var logo=window._obLogoData||null;
+  var msg=document.getElementById('ob-msg');
+  if(!logo&&!col1){
+    if(msg){msg.textContent='Choisissez au moins une couleur ou un logo.';msg.style.color='#ef4444';}
+    return;
+  }
+  if(!currentClub){if(msg){msg.textContent='Club non chargé.';msg.style.color='#ef4444';}return;}
+  // Sauvegarde dans currentClub
+  if(logo)currentClub.logoData=logo;
+  if(col1){currentClub.customColor1=col1;currentClub.color1=col1;}
+  if(col2){currentClub.customColor2=col2;currentClub.color2=col2;}
+  currentClub.theme='custom';
+  var clubs=getClubs();
+  var idx=clubs.findIndex(function(c){return c.id===currentClub.id;});
+  if(idx>=0){clubs[idx]=currentClub;}else{clubs.push(currentClub);}
+  saveClubs(clubs);
+  // Applique immédiatement
+  try{applyClubBranding(currentClub);}catch(e){}
+  // Flag onboardingDone dans user_metadata Supabase
+  if(_supabase){
+    try{await _supabase.auth.updateUser({data:{onboardingDone:true}});}
+    catch(e){console.warn('[onboarding updateUser]',e.message);}
+  }
+  // Sync Supabase clubs (best-effort)
+  try{
+    fetch('/api/clubs',{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({club:currentClub})}).catch(function(){});
+  }catch(e){}
+  var ov=document.getElementById('modal-onboarding');
+  if(ov)ov.style.display='none';
+}
+
+// ── INVITATION COACH (Supabase) ──
+async function inviterCoachSupabase(){
+  var inp=document.getElementById('invite-coach-email');
+  if(!inp)return;
+  var email=inp.value.trim();
+  var msgEl=document.getElementById('invite-coach-msg');
   if(!email){if(msgEl){msgEl.textContent='Email requis';msgEl.style.color='#ef4444';}return;}
   if(msgEl){msgEl.textContent='Envoi en cours…';msgEl.style.color='var(--muted)';}
   try{
     var r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email:email,coachId:currentCoachId||''})});
+      body:JSON.stringify({email:email,role:'coach',coachId:currentCoachId||'',clubId:(currentClub&&currentClub.id)||''})});
     var d=await r.json();
     if(!r.ok||d.error){if(msgEl){msgEl.textContent=d.error||'Erreur';msgEl.style.color='#ef4444';}return;}
     if(msgEl){msgEl.textContent='✅ Invitation envoyée à '+email;msgEl.style.color='#16a34a';}
@@ -7397,6 +7503,10 @@ function renderNageurManage(){
   // Invitation par email (Supabase)
   html+='<div style="margin-top:20px;padding:16px;background:rgba(33,118,232,.05);border:1px solid rgba(33,118,232,.15);border-radius:10px">'
     +'<div style="font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:10px">✉️ Inviter un nageur par email</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+    +'<input id="invite-nageur-firstname" type="text" placeholder="Prénom" style="flex:1;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.88rem;box-sizing:border-box;background:var(--bg,#f8fafc)">'
+    +'<input id="invite-nageur-lastname" type="text" placeholder="Nom" style="flex:1;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.88rem;box-sizing:border-box;background:var(--bg,#f8fafc)">'
+    +'</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:6px">'
     +'<input id="invite-nageur-email" type="email" placeholder="nageur@exemple.com" style="flex:1;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.88rem;box-sizing:border-box;background:var(--bg,#f8fafc)">'
     +'<button onclick="inviterNageurSupabase()" style="padding:9px 14px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;white-space:nowrap;min-height:44px">Inviter</button>'
@@ -7787,7 +7897,14 @@ initDefaultClubs();
     visitorMode:false
   };
   currentCoachId=_coach.id;
+  window._sbUser=_user;
   launchApp(_coach);
+  // Onboarding bloquant si aucun branding personnalisé et flag non posé
+  try{
+    if(typeof _shouldShowOnboarding==='function'&&_shouldShowOnboarding(_user)){
+      _openOnboarding();
+    }
+  }catch(e){console.warn('[onboarding]',e.message);}
 })();
 } catch(e) {
   document.body.innerHTML = '<div style="padding:20px;font-family:monospace;color:red"><b>ERREUR JS:</b><br>' + e.message + '<br><br>' + e.stack + '</div>';
@@ -7867,6 +7984,42 @@ initDefaultClubs();
       <button onclick="document.getElementById('modal-delete-swimmer').style.display='none'" style="padding:9px 18px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;background:none;cursor:pointer;min-height:44px">Annuler</button>
       <button id="modal-delete-swimmer-confirm" style="padding:9px 18px;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px">Supprimer</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ ONBOARDING (premier login coach) ══ -->
+<div id="modal-onboarding" style="display:none;position:fixed;inset:0;background:rgba(10,10,10,.97);z-index:3000;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:var(--card,#fff);border-radius:16px;padding:28px 24px;width:min(94vw,440px);max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 10px 40px rgba(0,0,0,.4)">
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:2px;color:var(--text);margin-bottom:6px">Personnalisez votre espace</div>
+      <div style="font-size:.85rem;color:var(--muted);line-height:1.5">Choisissez au moins une couleur ou un logo pour continuer</div>
+    </div>
+    <!-- Logo -->
+    <div style="margin-bottom:18px">
+      <label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:6px">Logo du club</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <img id="ob-logo-preview" src="" style="width:48px;height:48px;border-radius:8px;object-fit:contain;background:var(--bg,#f8fafc);border:1px solid var(--border,#e5e7eb);display:none">
+        <button type="button" onclick="document.getElementById('ob-logo-input').click()" style="flex:1;padding:10px 12px;border-radius:8px;border:1.5px dashed var(--border,#cbd5e1);background:var(--bg,#f8fafc);color:var(--muted);font-size:.85rem;cursor:pointer;min-height:44px">📁 Importer un logo</button>
+        <input type="file" id="ob-logo-input" accept="image/*" style="display:none" onchange="_obHandleLogo(this.files[0])">
+      </div>
+    </div>
+    <!-- Couleurs -->
+    <div style="margin-bottom:18px">
+      <label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:6px">Couleur principale <span style="font-size:.7rem;color:var(--muted);font-weight:400">(si pas de logo)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="color" id="ob-color1" value="#1560bd" oninput="document.getElementById('ob-color1-text').value=this.value" style="width:48px;height:44px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;cursor:pointer;padding:2px;background:#fff">
+        <input type="text" id="ob-color1-text" value="#1560bd" oninput="document.getElementById('ob-color1').value=this.value" style="flex:1;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.88rem;font-family:monospace;background:var(--bg,#f8fafc)">
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:6px">Couleur secondaire <span style="font-size:.7rem;color:var(--muted);font-weight:400">(optionnel)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="color" id="ob-color2" value="#f5c400" oninput="document.getElementById('ob-color2-text').value=this.value" style="width:48px;height:44px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;cursor:pointer;padding:2px;background:#fff">
+        <input type="text" id="ob-color2-text" value="#f5c400" oninput="document.getElementById('ob-color2').value=this.value" style="flex:1;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.88rem;font-family:monospace;background:var(--bg,#f8fafc)">
+      </div>
+    </div>
+    <div id="ob-msg" style="font-size:.78rem;min-height:18px;margin-bottom:10px;text-align:center"></div>
+    <button onclick="_completeOnboarding()" id="ob-finish-btn" style="width:100%;padding:13px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;cursor:pointer;min-height:48px">TERMINER</button>
   </div>
 </div>
 
