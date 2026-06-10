@@ -32,10 +32,10 @@ export default async function handler(req) {
 
   const _role = role === 'coach' ? 'coach' : 'swimmer';
 
-  // Requires SUPABASE_SERVICE_ROLE_KEY (not the anon key) for admin operations
+  // Requires SUPABASE_SERVICE_KEY (not the anon key) for admin operations
   const sb = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.SUPABASE_SERVICE_KEY
   );
 
   const meta = {
