@@ -245,16 +245,6 @@ async function submitForgot(){
   msg.textContent = '✅ Lien envoyé — vérifiez votre boite mail.';
 }
 
-// Redirige si déjà connecté
-(async function(){
-  try{
-    var r = await _sb.auth.getSession();
-    if(r && r.data && r.data.session){
-      var role = r.data.session.user && r.data.session.user.user_metadata && r.data.session.user.user_metadata.role;
-      window.location.href = (role === 'swimmer') ? '/swimmer.html' : '/';
-    }
-  }catch(e){console.warn('[auth check]', e.message);}
-})();
 </script>
 </body>
 </html>

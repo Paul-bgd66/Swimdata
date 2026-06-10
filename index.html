@@ -5983,7 +5983,7 @@ document.addEventListener('click',function(e){
 // ── SUPABASE AUTH ──
 async function _supabaseSignOut(){
   if(_supabase){
-    try{await _supabase.auth.signOut();}catch(e){console.warn('[signOut]',e.message);}
+    try{await _supabase.auth.signOut({scope:'global'});}catch(e){console.warn('[signOut]',e.message);}
   }
   logout();
   window.location.href='/login.html';
