@@ -49,5 +49,25 @@ export default async function handler(req) {
   const { data, error } = await sb.auth.admin.inviteUserByEmail(email, { data: meta });
 
   if (error) return json(400, { error: error.message });
-  return json(200, { success: true, userId: data?.user?.id });
+
+  const userId = data?.user?.id;
+
+  // Insert dans la table swimmers (uniquement pour le rôle swimmer)
+  if (_role === 'swimmer' && userId) {
+    const { error: insertErr } = await sb.from('swimmers').insert({
+      id: userId,
+      coach_id: coachId || null,
+      club_id: clubId || null,
+      first_name: firstName || '',
+      last_name: lastName || '',
+      email: email,
+      status: 'invited',
+    });
+    if (insertErr) {
+      console.error('[invite] swimmers insert error:', insertErr);
+      return json(500, { error: 'Invitation envoyée mais profil nageur non créé : ' + insertErr.message, userId });
+    }
+  }
+
+  return json(200, { success: true, userId });
 }
