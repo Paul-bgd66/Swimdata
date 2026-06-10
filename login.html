@@ -7,41 +7,51 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
+  :root{
+    --navy:#0b2550;
+    --blue2:#2176e8;
+    --yellow:#f5c400;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
   body{
-    min-height:100vh;
-    background:linear-gradient(160deg,#0b2550 0%,#1560bd 100%);
-    display:flex;align-items:center;justify-content:center;
+    background:#0a0a0a;
+    color:#fff;
     font-family:'DM Sans',sans-serif;
+    display:flex;align-items:center;justify-content:center;
     padding:20px;
+    min-height:100vh;
   }
   .card{
-    background:rgba(255,255,255,.07);
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:16px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
     padding:36px 28px 28px;
     width:100%;max-width:380px;
-    backdrop-filter:blur(10px);
   }
   .logo{
     font-family:'Bebas Neue',sans-serif;
-    font-size:2.2rem;letter-spacing:4px;
-    color:#f5c400;
-    text-align:center;margin-bottom:4px;
+    font-size:2.4rem;letter-spacing:4px;
+    color:#fff;
+    text-align:center;margin-bottom:6px;
   }
   .tagline{
     font-size:.6rem;letter-spacing:3px;text-transform:uppercase;
-    color:rgba(255,255,255,.3);text-align:center;margin-bottom:32px;
+    color:rgba(255,255,255,.35);text-align:center;margin-bottom:32px;
   }
+  .state{display:none}
+  .state.active{display:block}
+
   .field-label{
-    font-size:.75rem;font-weight:600;
-    color:rgba(255,255,255,.55);
+    font-size:.72rem;font-weight:600;
+    color:rgba(255,255,255,.5);
     margin-bottom:6px;
+    text-transform:uppercase;letter-spacing:1px;
   }
   input{
     width:100%;
-    background:rgba(255,255,255,.08);
-    border:1.5px solid rgba(255,255,255,.15);
+    background:rgba(255,255,255,.06);
+    border:1.5px solid rgba(255,255,255,.12);
     border-radius:8px;
     padding:12px 14px;
     color:#fff;
@@ -51,45 +61,53 @@
     transition:border-color .2s;
     margin-bottom:14px;
   }
-  input:focus{border-color:rgba(255,255,255,.45);}
-  input::placeholder{color:rgba(255,255,255,.3);}
-  .btn-primary{
+  input:focus{border-color:rgba(255,255,255,.4);}
+  input::placeholder{color:rgba(255,255,255,.25);}
+
+  .btn{
     width:100%;
-    background:#f5c400;color:#0b2550;
     border:none;border-radius:10px;
     padding:14px;
     font-family:'Bebas Neue',sans-serif;
-    font-size:1.1rem;letter-spacing:2px;
+    font-size:1.05rem;letter-spacing:2px;
     cursor:pointer;
-    transition:opacity .2s;
+    transition:opacity .2s, background .2s;
     margin-top:4px;
   }
-  .btn-primary:hover{opacity:.88;}
-  .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
-  .error{
-    font-size:.78rem;color:#f87171;
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-primary{background:var(--blue2);color:#fff;}
+  .btn-primary:hover:not(:disabled){opacity:.88;}
+  .btn-outline{
+    background:transparent;color:#fff;
+    border:1.5px solid rgba(255,255,255,.25);
+    margin-top:10px;
+  }
+  .btn-outline:hover:not(:disabled){background:rgba(255,255,255,.06);}
+
+  .msg{
+    font-size:.78rem;
     min-height:18px;
     text-align:center;
-    margin:8px 0 4px;
+    margin:10px 0 4px;
   }
-  .forgot{
-    text-align:center;
-    margin-top:14px;
-  }
-  .forgot button{
+  .msg.err{color:#f87171}
+  .msg.ok{color:#22c55e}
+  .msg.mute{color:rgba(255,255,255,.55)}
+
+  .link-btn{
+    display:block;width:100%;
     background:none;border:none;
     color:rgba(255,255,255,.4);
     font-family:'DM Sans',sans-serif;
-    font-size:.75rem;cursor:pointer;
+    font-size:.78rem;cursor:pointer;
     text-decoration:underline;
-    padding:0;width:auto;margin:0;
+    padding:8px 0;
+    text-align:center;
+    margin:0;
   }
-  .forgot button:hover{color:rgba(255,255,255,.65);}
-  .forgot-msg{
-    font-size:.75rem;text-align:center;
-    margin-top:8px;min-height:16px;
-    color:rgba(255,255,255,.55);
-  }
+  .link-btn:hover{color:rgba(255,255,255,.7);}
+  .back-link{margin-top:14px;}
+
   #forgot-section{display:none;margin-top:14px;}
 </style>
 </head>
@@ -98,83 +116,138 @@
   <div class="logo">SWIMDATA</div>
   <div class="tagline">La plateforme des coachs de natation</div>
 
-  <div class="field-label">Email</div>
-  <input type="email" id="login-email" placeholder="coach@monclub.fr"
-    onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
-
-  <div class="field-label">Mot de passe</div>
-  <input type="password" id="login-password" placeholder="••••••••"
-    onkeydown="if(event.key==='Enter')submitLogin()">
-
-  <div class="error" id="login-error"></div>
-
-  <button class="btn-primary" id="login-btn" onclick="submitLogin()">SE CONNECTER</button>
-
-  <div class="forgot">
-    <button onclick="toggleForgot()">Mot de passe oublié ?</button>
+  <!-- ÉTAT 1 : ACCUEIL -->
+  <div class="state active" id="state-home">
+    <button class="btn btn-primary" onclick="showState('signup')">S'INSCRIRE</button>
+    <button class="btn btn-outline" onclick="showState('login')">SE CONNECTER</button>
   </div>
 
-  <div id="forgot-section">
-    <input type="email" id="forgot-email" placeholder="Votre email" style="margin-top:8px">
-    <button class="btn-primary" onclick="submitForgot()" style="background:rgba(255,255,255,.15);color:#fff;margin-top:0">ENVOYER LE LIEN</button>
-    <div class="forgot-msg" id="forgot-msg"></div>
+  <!-- ÉTAT 2 : SE CONNECTER -->
+  <div class="state" id="state-login">
+    <div class="field-label">Email</div>
+    <input type="email" id="login-email" placeholder="coach@monclub.fr" autocomplete="email"
+      onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+    <div class="field-label">Mot de passe</div>
+    <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')submitLogin()">
+    <div class="msg err" id="login-msg"></div>
+    <button class="btn btn-primary" id="login-btn" onclick="submitLogin()">SE CONNECTER</button>
+    <button class="link-btn" onclick="toggleForgot()">Mot de passe oublié ?</button>
+    <div id="forgot-section">
+      <input type="email" id="forgot-email" placeholder="Votre email">
+      <button class="btn btn-outline" onclick="submitForgot()" style="margin-top:0">ENVOYER LE LIEN</button>
+      <div class="msg mute" id="forgot-msg"></div>
+    </div>
+    <button class="link-btn back-link" onclick="showState('home')">← Retour</button>
+  </div>
+
+  <!-- ÉTAT 3 : S'INSCRIRE -->
+  <div class="state" id="state-signup">
+    <div class="field-label">Email</div>
+    <input type="email" id="signup-email" placeholder="coach@monclub.fr" autocomplete="email">
+    <div class="field-label">Mot de passe</div>
+    <input type="password" id="signup-password" placeholder="Minimum 6 caractères" autocomplete="new-password">
+    <div class="field-label">Nom du club</div>
+    <input type="text" id="signup-club" placeholder="ex: Canet 66 Natation">
+    <div class="msg" id="signup-msg"></div>
+    <button class="btn btn-primary" id="signup-btn" onclick="submitSignup()">CRÉER MON COMPTE</button>
+    <button class="link-btn back-link" onclick="showState('home')">← Retour</button>
   </div>
 </div>
 
 <script>
-// ── SUPABASE CONFIG (mêmes valeurs que dans index.html) ──
+// ── SUPABASE CONFIG ──
 var _SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co';
 var _SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv';
 var _sb = supabase.createClient(_SB_URL, _SB_ANON);
 
+function showState(name){
+  ['home','login','signup'].forEach(function(s){
+    var el=document.getElementById('state-'+s);
+    if(el)el.classList.toggle('active', s===name);
+  });
+  // Reset messages
+  var lm=document.getElementById('login-msg');if(lm)lm.textContent='';
+  var sm=document.getElementById('signup-msg');if(sm){sm.textContent='';sm.className='msg';}
+  var fm=document.getElementById('forgot-msg');if(fm){fm.textContent='';fm.className='msg mute';}
+  var fs=document.getElementById('forgot-section');if(fs)fs.style.display='none';
+}
+
 async function submitLogin(){
   var email = document.getElementById('login-email').value.trim();
   var password = document.getElementById('login-password').value;
-  var errEl = document.getElementById('login-error');
+  var msg = document.getElementById('login-msg');
   var btn = document.getElementById('login-btn');
-  errEl.textContent = '';
-  if(!email||!password){errEl.textContent='Email et mot de passe requis.';return;}
+  msg.textContent = '';
+  if(!email||!password){msg.textContent='Email et mot de passe requis.';return;}
   btn.disabled = true;
   btn.textContent = 'CONNEXION…';
-  var {data, error} = await _sb.auth.signInWithPassword({email, password});
-  if(error){
-    errEl.textContent = error.message;
+  var res = await _sb.auth.signInWithPassword({email:email, password:password});
+  if(res.error){
+    msg.textContent = res.error.message;
     btn.disabled = false;
     btn.textContent = 'SE CONNECTER';
     return;
   }
-  var role = data.user && data.user.user_metadata && data.user.user_metadata.role;
-  if(role === 'swimmer'){
-    window.location.href = '/swimmer.html';
-  } else {
-    window.location.href = '/';
+  var role = res.data && res.data.user && res.data.user.user_metadata && res.data.user.user_metadata.role;
+  window.location.href = (role === 'swimmer') ? '/swimmer.html' : '/';
+}
+
+async function submitSignup(){
+  var email = document.getElementById('signup-email').value.trim();
+  var password = document.getElementById('signup-password').value;
+  var clubName = document.getElementById('signup-club').value.trim();
+  var msg = document.getElementById('signup-msg');
+  var btn = document.getElementById('signup-btn');
+  msg.className='msg err';msg.textContent='';
+  if(!email||!password){msg.textContent='Email et mot de passe requis.';return;}
+  if(password.length<6){msg.textContent='Mot de passe : 6 caractères minimum.';return;}
+  btn.disabled = true;
+  btn.textContent = 'CRÉATION…';
+  var res = await _sb.auth.signUp({
+    email:email, password:password,
+    options:{data:{role:'coach', clubName:clubName||''}}
+  });
+  btn.disabled = false;
+  btn.textContent = 'CRÉER MON COMPTE';
+  if(res.error){
+    msg.className='msg err';
+    msg.textContent = res.error.message;
+    return;
   }
+  msg.className='msg ok';
+  msg.textContent = 'Email de confirmation envoyé à ' + email;
 }
 
 function toggleForgot(){
   var s = document.getElementById('forgot-section');
-  s.style.display = s.style.display === 'none' ? 'block' : 'none';
+  if(!s)return;
+  s.style.display = s.style.display === 'block' ? 'none' : 'block';
 }
 
 async function submitForgot(){
   var email = document.getElementById('forgot-email').value.trim();
   var msg = document.getElementById('forgot-msg');
+  msg.className='msg mute';
   if(!email){msg.textContent='Entrez votre email.';return;}
   msg.textContent = 'Envoi en cours…';
-  var {error} = await _sb.auth.resetPasswordForEmail(email, {
+  var res = await _sb.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin + '/login.html'
   });
-  if(error){msg.textContent = error.message; return;}
+  if(res.error){msg.className='msg err';msg.textContent = res.error.message; return;}
+  msg.className='msg ok';
   msg.textContent = '✅ Lien envoyé — vérifiez votre boite mail.';
 }
 
 // Redirige si déjà connecté
 (async function(){
-  var {data} = await _sb.auth.getSession();
-  if(data && data.session){
-    var role = data.session.user && data.session.user.user_metadata && data.session.user.user_metadata.role;
-    window.location.href = (role === 'swimmer') ? '/swimmer.html' : '/';
-  }
+  try{
+    var r = await _sb.auth.getSession();
+    if(r && r.data && r.data.session){
+      var role = r.data.session.user && r.data.session.user.user_metadata && r.data.session.user.user_metadata.role;
+      window.location.href = (role === 'swimmer') ? '/swimmer.html' : '/';
+    }
+  }catch(e){console.warn('[auth check]', e.message);}
 })();
 </script>
 </body>

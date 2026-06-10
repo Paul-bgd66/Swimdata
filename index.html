@@ -7796,26 +7796,63 @@ function loadCanet66(){
 }
 
 (async function _authInit(){
-  if(_supabase){
-    var _sbRes=null;
-    try{_sbRes=await _supabase.auth.getSession();}catch(e){console.warn('[auth] Supabase unreachable:',e.message);}
-    var _sbSession=_sbRes&&_sbRes.data&&_sbRes.data.session||null;
-    if(!_sbSession){window.location.href='/login.html';return;}
-  }
-  const session=getSession();
-  if(session){
-    const clubs=getClubs();
-    const club=clubs.find(c=>c.id===session.clubId);
-    const coach=(club?club.coaches.find(function(c){return c.id===session.coachId;}):null);
-    if(club&&coach){
-      currentClub=club;currentCoachId=coach.id;
-      launchApp(coach);
-    }else{
-      clearSession();loadCanet66();showScreen('screen-splash');
+  // Fallback : Supabase non configuré → ancien flow splash
+  if(!_supabase){
+    const session=getSession();
+    if(session){
+      const clubs=getClubs();
+      const club=clubs.find(c=>c.id===session.clubId);
+      const coach=(club?club.coaches.find(function(c){return c.id===session.coachId;}):null);
+      if(club&&coach){currentClub=club;currentCoachId=coach.id;launchApp(coach);return;}
+      clearSession();
     }
-  }else{
-    loadCanet66();showScreen('screen-splash');
+    loadCanet66();showScreen('screen-splash');return;
   }
+  // Supabase Auth
+  var _sbRes=null;
+  try{_sbRes=await _supabase.auth.getSession();}catch(e){console.warn('[auth] Supabase unreachable:',e.message);}
+  var _sbSession=_sbRes&&_sbRes.data&&_sbRes.data.session||null;
+  if(!_sbSession){window.location.href='/login.html';return;}
+  var _user=_sbSession.user||{};
+  var _meta=_user.user_metadata||{};
+  // Nageur → swimmer.html
+  if(_meta.role==='swimmer'){window.location.href='/swimmer.html';return;}
+  // Trouve/crée le club selon clubName du metadata (fallback : Canet 66)
+  var _clubName=(_meta.clubName||'').trim();
+  var _club=null;
+  if(_clubName){
+    var _clubs=getClubs();
+    _club=_clubs.find(function(c){return c.name.toLowerCase()===_clubName.toLowerCase();});
+    if(!_club){
+      _club={
+        id:_clubName.toLowerCase().replace(/[^a-z0-9]/g,'')||('club'+Date.now()),
+        name:_clubName,
+        shortName:_clubName.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,4)||_clubName.slice(0,4).toUpperCase(),
+        color1:'#1560bd',color2:'#f5c400',theme:'default',
+        customColor1:null,customColor2:null,logoData:null,
+        hash:'',email:'',coaches:[]
+      };
+      _clubs.push(_club);saveClubs(_clubs);
+    }
+    currentClub=_club;
+  } else {
+    _club=loadCanet66();
+  }
+  // Construit le coach à partir de Supabase user (id = user.id)
+  var _emailPrefix=(_user.email||'coach').split('@')[0];
+  var _coachName=_meta.coachName||_emailPrefix;
+  var _coach={
+    id:_user.id,
+    name:_coachName,
+    initials:getInitials(_coachName),
+    email:_user.email||'',
+    role:_meta.role==='manager'?'manager':'coach',
+    color:'#2176e8',
+    hasPin:false,
+    visitorMode:false
+  };
+  currentCoachId=_coach.id;
+  launchApp(_coach);
 })();
 // Sinon l'écran coaches est déjà visible
 } catch(e) {
