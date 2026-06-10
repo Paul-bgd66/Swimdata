@@ -539,9 +539,12 @@ body.visitor-mode .visitor-banner{display:flex}
     <div id="lm-name">Coach</div>
     <div class="logout-menu-sub" id="lm-email"></div>
   </div>
-  <div class="logout-item visitor-hide" onclick="openCoachSettings()" id="lm-mypass">🔒 Mon mot de passe</div>
-  <div class="logout-item visitor-hide" onclick="openEmailSettings()" id="lm-myemail">✉️ Mon adresse email</div>
-  <div class="logout-item danger" onclick="logout()" id="lm-logout">🚪 Se déconnecter</div>
+  <div class="logout-item visitor-hide" onclick="closeLogoutMenu();openChangePwModal()" id="lm-mypass">🔒 Changer mot de passe</div>
+  <div class="logout-item visitor-hide" onclick="toggleVisitorEnabledFromMenu()" id="lm-visitor">
+    <span style="flex:1">👁 Mode visiteur</span>
+    <span id="lm-visitor-badge" style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.06);color:var(--muted)">OFF</span>
+  </div>
+  <div class="logout-item danger" onclick="_supabaseSignOut()" id="lm-logout">🚪 Se déconnecter</div>
 </div>
 
 <div class="visitor-banner" id="visitor-banner">
@@ -604,7 +607,7 @@ body.visitor-mode .visitor-banner{display:flex}
           <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span id="snav-planning-lbl">Planning prévisionnel</span>
         </div>
         <div class="sb-item" id="snav-coachs" onclick="showPanel('coachs')">
-          <span class="sb-icon">🏊</span><span id="snav-coachs-lbl">Coachs</span>
+          <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><line x1="16" y1="11" x2="22" y2="11"/><line x1="19" y1="8" x2="19" y2="14"/></svg></span><span id="snav-coachs-lbl">Coachs</span>
         </div>
       </nav>
 
@@ -5348,7 +5351,8 @@ function launchApp(coach){
   // Header — avatar affiche le club (shortName), nom du coach à droite
   var _clubLabel=(currentClub&&(currentClub.shortName||currentClub.name))||'';
   document.getElementById('coach-av').textContent=_clubLabel?_clubLabel.slice(0,3).toUpperCase():(coach.initials||getInitials(coach.name));
-  document.getElementById('coach-nm').textContent=coach.name+(coach.role==='manager'?' ⭐':'');
+  var _displayName=coach.firstname||(coach.name?coach.name.split(' ')[0]:'')||coach.name||'Coach';
+  document.getElementById('coach-nm').textContent=_displayName;
   document.getElementById('lm-name').textContent=coach.name;
   document.getElementById('lm-email').textContent=(currentClub ? currentClub.name : '');
   // Cache les écrans auth
@@ -5969,7 +5973,7 @@ function openEmailSettings(){
     showToast(newEmail?t('toast.email.updated'):t('toast.email.deleted'));
   }
 }
-function toggleLogoutMenu(){document.getElementById('logout-menu').classList.toggle('open')}
+function toggleLogoutMenu(){var m=document.getElementById('logout-menu');m.classList.toggle('open');if(m.classList.contains('open')&&typeof _refreshVisitorMenuBadge==='function')_refreshVisitorMenuBadge();}
 function closeLogoutMenu(){document.getElementById('logout-menu').classList.remove('open')}
 function logout(){
   closeLogoutMenu();
@@ -6005,6 +6009,50 @@ async function _supabaseSignOut(){
   }
   logout();
   window.location.href='/login.html';
+}
+
+// ── CHANGER MOT DE PASSE (Supabase) ──
+function openChangePwModal(){
+  document.getElementById('cpw-new').value='';
+  document.getElementById('cpw-confirm').value='';
+  var m=document.getElementById('cpw-msg');if(m){m.textContent='';m.style.color='';}
+  document.getElementById('modal-change-password').style.display='flex';
+}
+function closeChangePwModal(){
+  document.getElementById('modal-change-password').style.display='none';
+}
+async function submitChangePw(){
+  var pw=document.getElementById('cpw-new').value;
+  var pw2=document.getElementById('cpw-confirm').value;
+  var msg=document.getElementById('cpw-msg');
+  if(pw.length<6){msg.style.color='#ef4444';msg.textContent='6 caractères minimum.';return;}
+  if(pw!==pw2){msg.style.color='#ef4444';msg.textContent='Les mots de passe ne correspondent pas.';return;}
+  if(!_supabase){msg.style.color='#ef4444';msg.textContent='Supabase non configuré.';return;}
+  msg.style.color='var(--muted)';msg.textContent='Mise à jour…';
+  var res=await _supabase.auth.updateUser({password:pw});
+  if(res.error){msg.style.color='#ef4444';msg.textContent=res.error.message;return;}
+  msg.style.color='#16a34a';msg.textContent='✅ Mot de passe mis à jour';
+  setTimeout(closeChangePwModal,1500);
+}
+
+// ── TOGGLE VISITEUR depuis le menu coach ──
+function _refreshVisitorMenuBadge(){
+  var b=document.getElementById('lm-visitor-badge');
+  if(!b)return;
+  var vs=(typeof getVisitorSettings==='function')?getVisitorSettings():{enabled:false};
+  if(vs.enabled){
+    b.textContent='ON';
+    b.style.background='rgba(34,197,94,.15)';
+    b.style.color='#16a34a';
+  } else {
+    b.textContent='OFF';
+    b.style.background='rgba(0,0,0,.06)';
+    b.style.color='var(--muted)';
+  }
+}
+function toggleVisitorEnabledFromMenu(){
+  try{toggleVisitorEnabled();}catch(e){console.warn('[visitor toggle]',e.message);}
+  _refreshVisitorMenuBadge();
 }
 
 function openCreateCoachModal(){
@@ -8092,6 +8140,20 @@ initDefaultClubs();
     <input id="cc-sb-club" type="text" placeholder="ex: Canet 66 Natation" style="width:100%;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:16px;box-sizing:border-box;background:var(--bg,#f8fafc)">
     <div id="cc-sb-msg" style="font-size:.8rem;min-height:18px;margin-bottom:12px"></div>
     <button onclick="submitCreateCoachSupabase()" style="width:100%;padding:12px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;font-size:.92rem;font-weight:600;cursor:pointer">Créer le compte</button>
+  </div>
+</div>
+
+<!-- ══ MODAL CHANGER MOT DE PASSE ══ -->
+<div id="modal-change-password" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2100;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border-radius:14px;padding:28px 24px;width:min(92vw,380px)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <b>Changer le mot de passe</b>
+      <button onclick="closeChangePwModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);min-width:44px;min-height:44px">✕</button>
+    </div>
+    <input id="cpw-new" type="password" placeholder="Nouveau mot de passe" style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:10px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <input id="cpw-confirm" type="password" placeholder="Confirmer" style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:8px;font-size:.95rem;margin-bottom:10px;box-sizing:border-box;background:var(--bg,#f8fafc)">
+    <div id="cpw-msg" style="font-size:.8rem;min-height:18px;margin-bottom:10px"></div>
+    <button onclick="submitChangePw()" style="width:100%;padding:12px;background:var(--blue2,#2176e8);color:#fff;border:none;border-radius:8px;font-size:.92rem;font-weight:600;cursor:pointer">Enregistrer</button>
   </div>
 </div>
 </body>
