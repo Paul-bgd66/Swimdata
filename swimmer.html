@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SwimData — Espace nageur</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root{
+    --c1:#2176e8;
+    --c2:#f5c400;
+    --bg:#f4f6fa;
+    --card:#ffffff;
+    --border:#e3e8f0;
+    --text:#10203c;
+    --muted:#6b7a93;
+  }
+  [data-theme="dark"]{
+    --bg:#0d1117;
+    --card:#161d28;
+    --border:#27303d;
+    --text:#eef2f7;
+    --muted:#8b97a8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'DM Sans',sans-serif;
+    min-height:100vh;
+  }
+
+  /* ── HEADER ── */
+  .hdr{
+    position:fixed;top:0;left:0;right:0;z-index:100;
+    height:56px;
+    background:var(--card);
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:12px;
+    padding:0 16px;
+    padding-top:env(safe-area-inset-top);
+  }
+  .hdr-logo{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.4rem;letter-spacing:3px;
+    color:var(--c1);
+  }
+  .hdr-name{
+    flex:1;text-align:right;
+    font-size:.85rem;font-weight:600;color:var(--muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .hdr-out{
+    background:none;border:1px solid var(--border);
+    border-radius:8px;padding:7px 10px;cursor:pointer;
+    color:var(--muted);display:flex;align-items:center;
+  }
+  .hdr-out svg{width:16px;height:16px}
+
+  /* ── NAV ── */
+  .nav{
+    position:fixed;z-index:100;
+    background:var(--card);
+    display:flex;
+  }
+  .nav-item{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;cursor:pointer;
+    color:var(--muted);
+    font-size:.58rem;font-weight:600;letter-spacing:.3px;text-transform:uppercase;
+    border:none;background:none;font-family:'DM Sans',sans-serif;
+    transition:color .15s;
+  }
+  .nav-item svg{width:21px;height:21px}
+  .nav-item.active{color:var(--c1)}
+
+  /* mobile : bottom bar */
+  .nav{
+    bottom:0;left:0;right:0;
+    border-top:1px solid var(--border);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .nav-item{flex:1;padding:9px 0 7px}
+  main{padding:72px 16px calc(86px + env(safe-area-inset-bottom));max-width:860px;margin:0 auto}
+
+  /* desktop : sidebar */
+  @media(min-width:900px){
+    .nav{
+      top:56px;bottom:0;left:0;right:auto;width:200px;
+      flex-direction:column;
+      border-top:none;border-right:1px solid var(--border);
+      padding:16px 10px;gap:4px;
+    }
+    .nav-item{
+      flex:none;flex-direction:row;justify-content:flex-start;
+      gap:12px;padding:12px 14px;border-radius:10px;
+      font-size:.78rem;width:100%;
+    }
+    .nav-item.active{background:color-mix(in srgb, var(--c1) 12%, transparent)}
+    main{margin-left:200px;padding:80px 32px 40px;max-width:none}
+    .inner{max-width:860px;margin:0 auto}
+  }
+
+  /* ── TABS ── */
+  .tab{display:none}
+  .tab.active{display:block}
+  .page-title{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.6rem;letter-spacing:2px;
+    margin-bottom:16px;
+  }
+
+  /* ── CARDS ── */
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px;
+    margin-bottom:14px;
+  }
+  .card-label{
+    font-size:.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:8px;
+  }
+  .card-big{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:1px}
+  .card-sub{font-size:.78rem;color:var(--muted);margin-top:4px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid2 .card{margin-bottom:0}
+
+  /* ── FORMS ── */
+  .f-label{
+    font-size:.7rem;font-weight:600;color:var(--muted);
+    text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;
+  }
+  input,select,textarea{
+    width:100%;
+    background:var(--bg);
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    padding:11px 12px;
+    color:var(--text);
+    font-family:'DM Sans',sans-serif;
+    font-size:.9rem;
+    outline:none;
+    margin-bottom:12px;
+    -webkit-appearance:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--c1)}
+  input[type="color"]{padding:3px;height:42px;cursor:pointer}
+  input[readonly]{opacity:.6}
+
+  .btn{
+    border:none;border-radius:10px;
+    padding:12px 18px;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:.95rem;letter-spacing:1.5px;
+    cursor:pointer;
+    transition:opacity .15s;
+  }
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:var(--c1);color:#fff}
+  .btn-primary:hover:not(:disabled){opacity:.85}
+  .btn-outline{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+  .btn-outline:hover{background:color-mix(in srgb, var(--text) 5%, transparent)}
+  .btn-danger{background:transparent;color:#ef4444;border:1.5px solid #ef444455}
+  .btn-block{width:100%}
+
+  .msg{font-size:.78rem;min-height:16px;margin-top:6px}
+  .msg.err{color:#ef4444}
+  .msg.ok{color:#22c55e}
+
+  /* ── CALENDRIER ── */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cal-month{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:1.5px;text-transform:capitalize}
+  .cal-nav-btn{
+    background:var(--card);border:1px solid var(--border);border-radius:8px;
+    width:36px;height:36px;cursor:pointer;color:var(--text);font-size:1rem;
+  }
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-dow{font-size:.62rem;font-weight:700;color:var(--muted);text-align:center;padding:6px 0;text-transform:uppercase}
+  .cal-day{
+    aspect-ratio:1;
+    background:var(--card);border:1px solid var(--border);border-radius:9px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-size:.8rem;cursor:default;position:relative;
+  }
+  .cal-day.empty{background:transparent;border:none}
+  .cal-day.today{border-color:var(--c1);border-width:2px}
+  .cal-day.has-sess{cursor:pointer}
+  .cal-day .dots{display:flex;gap:3px}
+  .dot{width:7px;height:7px;border-radius:50%}
+  .dot.past{background:var(--c1)}
+  .dot.future{background:transparent;border:1.5px dashed var(--c2)}
+  .cal-legend{display:flex;gap:18px;margin-top:12px;font-size:.72rem;color:var(--muted);align-items:center}
+  .cal-legend .dot{width:9px;height:9px}
+
+  /* ── PERFORMANCES ── */
+  .bassin-toggle{display:flex;gap:8px;margin-bottom:14px}
+  .bassin-btn{
+    flex:1;padding:9px;border-radius:9px;cursor:pointer;
+    border:1.5px solid var(--border);background:var(--card);color:var(--muted);
+    font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:1.5px;
+  }
+  .bassin-btn.active{border-color:var(--c1);color:var(--c1);background:color-mix(in srgb, var(--c1) 8%, transparent)}
+  .perf-row{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 0;border-bottom:1px solid var(--border);
+  }
+  .perf-row:last-child{border-bottom:none}
+  .perf-ep{flex:1;font-size:.85rem;font-weight:600}
+  .perf-time{font-size:.82rem;min-width:74px;text-align:right;font-variant-numeric:tabular-nums}
+  .perf-time .tag{display:block;font-size:.55rem;font-weight:700;letter-spacing:1px;color:var(--muted)}
+  .perf-time.pb{color:var(--c1)}
+
+  /* ── VIDÉOS ── */
+  .vid-row{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;
+  }
+  .vid-row:last-child{border-bottom:none}
+  .vid-thumb{
+    width:44px;height:44px;border-radius:10px;flex-shrink:0;
+    background:color-mix(in srgb, var(--c1) 12%, transparent);
+    display:flex;align-items:center;justify-content:center;color:var(--c1);
+  }
+  .vid-info{flex:1;min-width:0}
+  .vid-name{font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vid-meta{font-size:.72rem;color:var(--muted)}
+
+  /* ── SETTINGS ── */
+  .set-row{display:flex;gap:10px}
+  .set-row>*{flex:1}
+  .theme-btns,.ph-btns{display:flex;gap:8px}
+  .theme-btn{
+    flex:1;padding:10px;border-radius:9px;cursor:pointer;
+    border:1.5px solid var(--border);background:var(--bg);color:var(--muted);
+    font-size:.8rem;font-weight:600;font-family:'DM Sans',sans-serif;
+  }
+  .theme-btn.active{border-color:var(--c1);color:var(--c1)}
+
+  /* ── MODAL ── */
+  .modal-bk{
+    display:none;position:fixed;inset:0;z-index:500;
+    background:rgba(0,0,0,.55);
+    align-items:flex-end;justify-content:center;
+    padding:0;
+  }
+  .modal-bk.show{display:flex}
+  .modal{
+    background:var(--card);
+    border-radius:18px 18px 0 0;
+    padding:22px 20px calc(24px + env(safe-area-inset-bottom));
+    width:100%;max-width:480px;
+    max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  }
+  @media(min-width:600px){
+    .modal-bk{align-items:center;padding:20px}
+    .modal{border-radius:16px;padding-bottom:24px}
+  }
+  .modal-title{
+    font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1.5px;
+    margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .modal-x{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:0 4px;line-height:1}
+
+  /* ── TOAST ── */
+  #toast{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(96px + env(safe-area-inset-bottom));z-index:900;
+    background:var(--text);color:var(--bg);
+    padding:11px 20px;border-radius:30px;
+    font-size:.8rem;font-weight:600;
+    opacity:0;pointer-events:none;transition:opacity .25s;
+    max-width:88vw;text-align:center;
+  }
+  @media(min-width:900px){#toast{bottom:34px}}
+  #toast.show{opacity:1}
+
+  /* ── COMPLETION OVERLAY ── */
+  #complete-ov{
+    display:none;position:fixed;inset:0;z-index:1000;
+    background:#0a0a0a;color:#fff;
+    align-items:center;justify-content:center;padding:20px;
+    overflow-y:auto;
+  }
+  #complete-ov.show{display:flex}
+  .cov-card{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;padding:36px 28px 28px;
+    width:100%;max-width:380px;margin:auto;
+  }
+  .cov-logo{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:4px;text-align:center;margin-bottom:4px}
+  .cov-sub{font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.35);text-align:center;margin-bottom:28px}
+  .cov-card .f-label{color:rgba(255,255,255,.5)}
+  .cov-card input{
+    background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:#fff;
+  }
+  .cov-card input:focus{border-color:rgba(255,255,255,.4)}
+
+  #loading{
+    position:fixed;inset:0;z-index:1100;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:3px;color:var(--muted);
+  }
+  .empty{font-size:.82rem;color:var(--muted);padding:8px 0}
+  .chart-wrap{position:relative;height:200px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<div id="loading">SWIMDATA…</div>
+
+<!-- ── OVERLAY COMPLÉTION COMPTE ── -->
+<div id="complete-ov">
+  <div class="cov-card">
+    <div class="cov-logo">SWIMDATA</div>
+    <div class="cov-sub">Bienvenue dans ton espace nageur</div>
+    <div class="f-label">Email</div>
+    <input type="email" id="cov-email" readonly>
+    <div class="f-label">Prénom</div>
+    <input type="text" id="cov-firstname" placeholder="Prénom" autocomplete="given-name">
+    <div class="f-label">Nom</div>
+    <input type="text" id="cov-lastname" placeholder="Nom" autocomplete="family-name">
+    <div class="f-label">Choisis ton mot de passe</div>
+    <input type="password" id="cov-password" placeholder="Minimum 6 caractères" autocomplete="new-password">
+    <div class="msg err" id="cov-msg"></div>
+    <button class="btn btn-primary btn-block" id="cov-btn" onclick="submitCompletion()">ACCÉDER À MON ESPACE</button>
+  </div>
+</div>
+
+<!-- ── HEADER ── -->
+<header class="hdr">
+  <div class="hdr-logo">SWIMDATA</div>
+  <div class="hdr-name" id="hdr-name"></div>
+  <button class="hdr-out" onclick="doSignOut()" title="Se déconnecter">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  </button>
+</header>
+
+<!-- ── NAV ── -->
+<nav class="nav" id="nav"></nav>
+
+<main><div class="inner">
+
+  <!-- ── 1. DASHBOARD ── -->
+  <section class="tab active" id="tab-dashboard">
+    <div class="card" style="background:linear-gradient(135deg,var(--c1),color-mix(in srgb,var(--c1) 60%,#000));color:#fff;border:none">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:1.5px" id="dash-hello"></div>
+      <div style="font-size:.8rem;opacity:.8;text-transform:capitalize" id="dash-date"></div>
+    </div>
+    <div class="grid2" style="margin-bottom:14px">
+      <div class="card">
+        <div class="card-label">Cette semaine</div>
+        <div class="card-big" id="dash-km-week">—</div>
+        <div class="card-sub">volume nagé</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Ce mois</div>
+        <div class="card-big" id="dash-km-month">—</div>
+        <div class="card-sub">volume nagé</div>
+      </div>
+    </div>
+    <div class="grid2" style="margin-bottom:14px">
+      <div class="card">
+        <div class="card-label">État de forme</div>
+        <div class="card-big" id="dash-hrv">—</div>
+        <div class="card-sub" id="dash-hrv-sub">aucune mesure HRV</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Poids</div>
+        <div class="card-big" id="dash-poids">—</div>
+        <div class="card-sub" id="dash-poids-sub">aucune mesure</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Wearables</div>
+      <div class="card-sub" style="margin:0 0 10px">Connecte Whoop ou Oura pour voir ton score de récupération ici.</div>
+      <div class="ph-btns">
+        <button class="btn btn-outline" onclick="wearablePlaceholder('Whoop')">WHOOP</button>
+        <button class="btn btn-outline" onclick="wearablePlaceholder('Oura')">OURA</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 2. ENTRAÎNEMENTS ── -->
+  <section class="tab" id="tab-training">
+    <div class="page-title">Entraînements</div>
+    <div class="card">
+      <div class="cal-head">
+        <button class="cal-nav-btn" onclick="calShift(-1)">‹</button>
+        <div class="cal-month" id="cal-month"></div>
+        <button class="cal-nav-btn" onclick="calShift(1)">›</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-legend">
+        <span style="display:flex;align-items:center;gap:6px"><span class="dot past"></span> Séance réalisée</span>
+        <span style="display:flex;align-items:center;gap:6px"><span class="dot future"></span> Séance programmée</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 3. PERFORMANCES ── -->
+  <section class="tab" id="tab-perf">
+    <div class="page-title">Performances</div>
+    <div class="bassin-toggle">
+      <button class="bassin-btn active" id="bassin-25" onclick="setBassin(25)">BASSIN 25M</button>
+      <button class="bassin-btn" id="bassin-50" onclick="setBassin(50)">BASSIN 50M</button>
+    </div>
+    <div class="card" id="perf-list"></div>
+    <button class="btn btn-primary btn-block" onclick="openAddPerf()">+ AJOUTER UNE PERF</button>
+  </section>
+
+  <!-- ── 4. VIDÉO ── -->
+  <section class="tab" id="tab-video">
+    <div class="page-title">Vidéo</div>
+    <div class="card">
+      <div class="card-label">Vidéos de mon coach</div>
+      <div id="vid-coach-list"><div class="empty">Chargement…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Mes vidéos</div>
+      <div id="vid-mine-list"><div class="empty">Chargement…</div></div>
+      <button class="btn btn-outline btn-block" style="margin-top:12px" onclick="openUploadVideo()">+ ENVOYER UNE VIDÉO À MON COACH</button>
+    </div>
+  </section>
+
+  <!-- ── 5. SANTÉ ── -->
+  <section class="tab" id="tab-sante">
+    <div class="page-title">Santé</div>
+    <div class="card">
+      <div class="card-label">HRV — ajouter une mesure</div>
+      <div class="set-row">
+        <div><div class="f-label">Date</div><input type="date" id="hrv-date"></div>
+        <div><div class="f-label">RMSSD (ms)</div><input type="number" id="hrv-val" placeholder="ex: 65" inputmode="decimal"></div>
+      </div>
+      <button class="btn btn-primary btn-block" id="hrv-btn" onclick="addHrv()">ENREGISTRER</button>
+      <div class="msg" id="hrv-msg"></div>
+      <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Poids — ajouter une mesure</div>
+      <div class="set-row">
+        <div><div class="f-label">Date</div><input type="date" id="poids-date"></div>
+        <div><div class="f-label">Poids (kg)</div><input type="number" id="poids-val" placeholder="ex: 72.4" inputmode="decimal" step="0.1"></div>
+      </div>
+      <button class="btn btn-primary btn-block" id="poids-btn" onclick="addPoids()">ENREGISTRER</button>
+      <div class="msg" id="poids-msg"></div>
+      <div class="chart-wrap"><canvas id="chart-poids"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Connecter mes appareils</div>
+      <div class="card-sub" style="margin:0 0 10px">Synchronise automatiquement HRV, sommeil et récupération.</div>
+      <div class="ph-btns">
+        <button class="btn btn-outline" onclick="wearablePlaceholder('Whoop')">WHOOP</button>
+        <button class="btn btn-outline" onclick="wearablePlaceholder('Oura')">OURA</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 6. RÉGLAGES ── -->
+  <section class="tab" id="tab-settings">
+    <div class="page-title">Réglages</div>
+    <div class="card">
+      <div class="card-label">Profil</div>
+      <div class="set-row">
+        <div><div class="f-label">Prénom</div><input type="text" id="set-firstname"></div>
+        <div><div class="f-label">Nom</div><input type="text" id="set-lastname"></div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="saveProfile()">ENREGISTRER</button>
+      <div class="msg" id="set-profile-msg"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Langue</div>
+      <select id="set-lang" onchange="saveLang()">
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="card-label">Thème</div>
+      <div class="theme-btns">
+        <button class="theme-btn" id="theme-light" onclick="setTheme('light')">☀️ Clair</button>
+        <button class="theme-btn" id="theme-dark" onclick="setTheme('dark')">🌙 Sombre</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Mes couleurs</div>
+      <div class="card-sub" style="margin:0 0 10px">Personnalise ton espace — n'impacte que ton compte.</div>
+      <div class="set-row">
+        <div><div class="f-label">Couleur principale</div><input type="color" id="set-c1" onchange="saveColors()"></div>
+        <div><div class="f-label">Couleur secondaire</div><input type="color" id="set-c2" onchange="saveColors()"></div>
+      </div>
+      <button class="btn btn-outline btn-block" onclick="resetColors()">REVENIR AUX COULEURS DU CLUB</button>
+    </div>
+    <div class="card">
+      <div class="card-label">Mot de passe</div>
+      <input type="password" id="set-pw1" placeholder="Nouveau mot de passe" autocomplete="new-password">
+      <input type="password" id="set-pw2" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+      <button class="btn btn-primary btn-block" onclick="changePassword()">CHANGER MON MOT DE PASSE</button>
+      <div class="msg" id="set-pw-msg"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Wearables</div>
+      <div class="ph-btns">
+        <button class="btn btn-outline" onclick="wearablePlaceholder('Whoop')">CONNECTER WHOOP</button>
+        <button class="btn btn-outline" onclick="wearablePlaceholder('Oura')">CONNECTER OURA</button>
+      </div>
+    </div>
+    <button class="btn btn-danger btn-block" onclick="doSignOut()">SE DÉCONNECTER</button>
+  </section>
+
+</div></main>
+
+<!-- ── MODAL ── -->
+<div class="modal-bk" id="modal-bk" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title"><span id="modal-title"></span><button class="modal-x" onclick="closeModal()">✕</button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── SUPABASE CONFIG ──
+var _SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co';
+var _SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv';
+var _supabase = supabase.createClient(_SB_URL, _SB_ANON);
+
+// ── STATE ──
+var _user=null, _meta={}, _club=null;
+var _swimmerNom='';            // "Prénom Nom" — clé d'identification dans les tables
+var _sessions=[], _perfs=[], _hrv=[], _poids=[], _videos=[];
+var _bassin=25;
+var _calDate=new Date();
+var _chartHrv=null, _chartPoids=null;
+var _lang=localStorage.getItem('swimmerLang')||'fr';
+var LOCALES={fr:'fr-FR',en:'en-US',es:'es-ES'};
+
+var EPREUVES_25=[
+  {nage:'crawl',distances:[50,100,200,400,800,1500]},
+  {nage:'dos',distances:[50,100,200]},
+  {nage:'brasse',distances:[50,100,200]},
+  {nage:'papillon',distances:[50,100,200]},
+  {nage:'4nages',distances:[100,200,400]}
+];
+var EPREUVES_50=[
+  {nage:'crawl',distances:[50,100,200,400,800,1500]},
+  {nage:'dos',distances:[50,100,200]},
+  {nage:'brasse',distances:[50,100,200]},
+  {nage:'papillon',distances:[50,100,200]},
+  {nage:'4nages',distances:[200,400]}
+];
+var NAGE_LABELS={crawl:'Crawl',dos:'Dos',brasse:'Brasse',papillon:'Papillon','4nages':'4 Nages'};
+
+// ── NAV ──
+var TABS=[
+  {id:'dashboard',label:'Accueil',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'},
+  {id:'training',label:'Entraîn.',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
+  {id:'perf',label:'Perfs',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'},
+  {id:'video',label:'Vidéo',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'},
+  {id:'sante',label:'Santé',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>'},
+  {id:'settings',label:'Réglages',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'}
+];
+
+function buildNav(){
+  var nav=document.getElementById('nav');
+  nav.innerHTML=TABS.map(function(t){
+    return '<button class="nav-item'+(t.id==='dashboard'?' active':'')+'" id="nav-'+t.id+'" onclick="showTab(\''+t.id+'\')">'+t.icon+'<span>'+t.label+'</span></button>';
+  }).join('');
+}
+
+function showTab(name){
+  TABS.forEach(function(t){
+    document.getElementById('tab-'+t.id).classList.toggle('active', t.id===name);
+    document.getElementById('nav-'+t.id).classList.toggle('active', t.id===name);
+  });
+  if(name==='training')renderCalendar();
+  if(name==='perf')renderPerfs();
+  if(name==='video')renderVideos();
+  if(name==='sante')renderSanteCharts();
+  window.scrollTo(0,0);
+}
+
+// ── HELPERS ──
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm=setTimeout(function(){t.classList.remove('show');},2600);
+}
+function showModal(title,html){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal-bk').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modal-bk').classList.remove('show');
+  document.getElementById('modal-body').innerHTML='';
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function todayStr(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtDate(iso){
+  if(!iso)return '';
+  try{return new Date(iso+'T12:00:00').toLocaleDateString(LOCALES[_lang]||'fr-FR',{day:'numeric',month:'short',year:'numeric'});}
+  catch(e){return iso;}
+}
+function fmtDist(m){
+  if(!m)return '0 m';
+  return m>=1000 ? (Math.round(m/100)/10).toLocaleString('fr-FR')+' km' : Math.round(m)+' m';
+}
+function sameName(a,b){
+  return String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();
+}
+// "1:02.45" | "32.5" → secondes
+function parseTemps(t){
+  if(t==null)return Infinity;
+  var s=String(t).trim().replace(',','.');
+  var m=s.match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/);
+  if(!m)return Infinity;
+  return (m[1]?parseInt(m[1],10)*60:0)+parseFloat(m[2]);
+}
+function sessionDist(s){
+  var v=s.distance||s.total_distance||s.total||s.volume||s.km||0;
+  v=Number(v)||0;
+  if(v>0&&v<100)v=v*1000; // valeur en km
+  return v;
+}
+function sessionDate(s){
+  var d=s.date||s.session_date||s.day||'';
+  return String(d).slice(0,10);
+}
+
+// ── INIT ──
+(async function init(){
+  try{
+    var sess=(await _supabase.auth.getSession()).data.session;
+    if(!sess){window.location.href='/login.html';return;}
+    if((sess.user.user_metadata||{}).role!=='swimmer'){window.location.href='/';return;}
+    _user=sess.user;
+    _meta=_user.user_metadata||{};
+    _lang=_meta.lang||_lang;
+    _swimmerNom=((_meta.firstName||'')+' '+(_meta.lastName||'')).trim()||(_user.email||'').split('@')[0];
+
+    buildNav();
+    document.getElementById('hdr-name').textContent=_meta.firstName||_swimmerNom;
+    setTheme(_meta.swimmerTheme||localStorage.getItem('swimmerTheme')||'light',true);
+
+    // couleurs club puis overrides perso
+    if(_meta.clubId){
+      try{
+        var r=await fetch('/api/clubs?id='+encodeURIComponent(_meta.clubId));
+        if(r.ok){_club=await r.json();}
+      }catch(e){console.warn('[club]',e.message);}
+    }
+    applyColors();
+
+    // overlay complétion compte
+    if(_meta.passwordSet!==true){
+      document.getElementById('cov-email').value=_user.email||'';
+      document.getElementById('cov-firstname').value=_meta.firstName||'';
+      document.getElementById('cov-lastname').value=_meta.lastName||'';
+      document.getElementById('complete-ov').classList.add('show');
+    }
+
+    initSettingsUI();
+    document.getElementById('hrv-date').value=todayStr();
+    document.getElementById('poids-date').value=todayStr();
+    renderDashboardStatic();
+    document.getElementById('loading').style.display='none';
+
+    await loadAllData();
+    renderDashboard();
+    renderCalendar();
+  }catch(e){
+    console.error('[init]',e);
+    document.getElementById('loading').textContent='ERREUR — '+e.message;
+  }
+})();
+
+function applyColors(){
+  var c1=_meta.swimmerColor1||(_club&&_club.color1)||'#2176e8';
+  var c2=_meta.swimmerColor2||(_club&&_club.color2)||'#f5c400';
+  document.documentElement.style.setProperty('--c1',c1);
+  document.documentElement.style.setProperty('--c2',c2);
+  var s1=document.getElementById('set-c1'),s2=document.getElementById('set-c2');
+  if(s1)s1.value=c1;
+  if(s2)s2.value=c2;
+}
+
+// ── DATA ──
+async function loadAllData(){
+  if(!_meta.clubId||!_meta.coachId){
+    console.warn('[data] clubId/coachId manquants dans user_metadata');
+    return;
+  }
+  var q='clubId='+encodeURIComponent(_meta.clubId)+'&coachId='+encodeURIComponent(_meta.coachId);
+  var results=await Promise.allSettled([
+    fetch('/api/sessions?'+q).then(function(r){return r.ok?r.json():[];}),
+    fetch('/api/performances?'+q).then(function(r){return r.ok?r.json():[];}),
+    fetch('/api/hrv?'+q).then(function(r){return r.ok?r.json():[];}),
+    fetch('/api/poids?'+q).then(function(r){return r.ok?r.json():[];}),
+    fetch('/api/videos?'+q).then(function(r){return r.ok?r.json():[];})
+  ]);
+
+  _sessions=results[0].status==='fulfilled'&&Array.isArray(results[0].value)?results[0].value:[];
+
+  // performances : [{nageur_nom, performances:[...]}]
+  _perfs=[];
+  if(results[1].status==='fulfilled'&&Array.isArray(results[1].value)){
+    results[1].value.forEach(function(g){
+      if(sameName(g.nageur_nom,_swimmerNom))_perfs=g.performances||[];
+    });
+  }
+
+  // hrv : [{nageur_nom, historique:[...]}]
+  _hrv=[];
+  if(results[2].status==='fulfilled'&&Array.isArray(results[2].value)){
+    results[2].value.forEach(function(g){
+      if(sameName(g.nageur_nom,_swimmerNom))_hrv=g.historique||[];
+    });
+  }
+  _hrv.sort(function(a,b){return a.date<b.date?-1:1;});
+
+  // poids : [{prenom, nom, entries:[...]}]
+  _poids=[];
+  if(results[3].status==='fulfilled'&&Array.isArray(results[3].value)){
+    results[3].value.forEach(function(g){
+      if(sameName(g.prenom,_meta.firstName)&&sameName(g.nom,_meta.lastName))_poids=g.entries||[];
+    });
+  }
+  _poids.sort(function(a,b){return a.date<b.date?-1:1;});
+
+  // videos : aplatir quel que soit le groupement
+  _videos=[];
+  if(results[4].status==='fulfilled'&&Array.isArray(results[4].value)){
+    results[4].value.forEach(function(item){
+      var vids=Array.isArray(item.videos)?item.videos:[item];
+      vids.forEach(function(v){
+        var sid=v.swimmer_id||item.swimmer_id||'';
+        var pre=v.swimmer_prenom||item.swimmer_prenom||item.prenom||'';
+        var nom=v.swimmer_nom||item.swimmer_nom||item.nom||'';
+        if(sid===_user.id||sameName(pre+' '+nom,_swimmerNom)){
+          _videos.push(v);
+        }
+      });
+    });
+  }
+}
+
+// ── 1. DASHBOARD ──
+function renderDashboardStatic(){
+  document.getElementById('dash-hello').textContent='Bonjour '+(_meta.firstName||_swimmerNom)+' 👋';
+  document.getElementById('dash-date').textContent=new Date().toLocaleDateString(LOCALES[_lang]||'fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+function renderDashboard(){
+  var now=new Date();
+  var monday=new Date(now);
+  monday.setDate(now.getDate()-((now.getDay()+6)%7));
+  monday.setHours(0,0,0,0);
+  var firstMonth=new Date(now.getFullYear(),now.getMonth(),1);
+  var wk=0,mo=0;
+  _sessions.forEach(function(s){
+    var ds=sessionDate(s);
+    if(!ds)return;
+    var d=new Date(ds+'T12:00:00');
+    if(d>now)return; // séances futures non comptées
+    var dist=sessionDist(s);
+    if(d>=monday)wk+=dist;
+    if(d>=firstMonth)mo+=dist;
+  });
+  document.getElementById('dash-km-week').textContent=fmtDist(wk);
+  document.getElementById('dash-km-month').textContent=fmtDist(mo);
+
+  // HRV
+  var withR=_hrv.filter(function(h){return h.rmssd!=null;});
+  if(withR.length){
+    var last=withR[withR.length-1];
+    var arrow='→';
+    if(withR.length>1){
+      var prev=withR[withR.length-2];
+      if(last.rmssd>prev.rmssd*1.05)arrow='↑';
+      else if(last.rmssd<prev.rmssd*0.95)arrow='↓';
+    }
+    document.getElementById('dash-hrv').textContent=last.rmssd+' ms '+arrow;
+    document.getElementById('dash-hrv-sub').textContent='RMSSD — '+fmtDate(last.date)+(last.note!=null?' · note '+last.note+'/10':'');
+  }
+
+  // Poids
+  if(_poids.length){
+    var lp=_poids[_poids.length-1];
+    document.getElementById('dash-poids').textContent=lp.weight+' kg';
+    document.getElementById('dash-poids-sub').textContent=fmtDate(lp.date);
+  }
+}
+
+// ── 2. CALENDRIER ──
+function calShift(n){
+  _calDate=new Date(_calDate.getFullYear(),_calDate.getMonth()+n,1);
+  renderCalendar();
+}
+
+function renderCalendar(){
+  var y=_calDate.getFullYear(),m=_calDate.getMonth();
+  document.getElementById('cal-month').textContent=new Date(y,m,1).toLocaleDateString(LOCALES[_lang]||'fr-FR',{month:'long',year:'numeric'});
+
+  var byDate={};
+  _sessions.forEach(function(s){
+    var ds=sessionDate(s);
+    if(!ds)return;
+    (byDate[ds]=byDate[ds]||[]).push(s);
+  });
+
+  var dows=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  var html=dows.map(function(d){return '<div class="cal-dow">'+d+'</div>';}).join('');
+  var firstDow=(new Date(y,m,1).getDay()+6)%7;
+  var nbDays=new Date(y,m+1,0).getDate();
+  var today=todayStr();
+
+  for(var i=0;i<firstDow;i++)html+='<div class="cal-day empty"></div>';
+  for(var d=1;d<=nbDays;d++){
+    var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var sess=byDate[ds]||[];
+    var cls='cal-day'+(ds===today?' today':'')+(sess.length?' has-sess':'');
+    var dots='';
+    if(sess.length){
+      dots='<span class="dots">'+sess.slice(0,3).map(function(){
+        return '<span class="dot '+(ds<=today?'past':'future')+'"></span>';
+      }).join('')+'</span>';
+    }
+    html+='<div class="'+cls+'"'+(sess.length?' onclick="openDayDetail(\''+ds+'\')"':'')+'><span>'+d+'</span>'+dots+'</div>';
+  }
+  document.getElementById('cal-grid').innerHTML=html;
+}
+
+function openDayDetail(ds){
+  var sess=_sessions.filter(function(s){return sessionDate(s)===ds;});
+  if(!sess.length)return;
+  var html=sess.map(function(s){return renderSessionDetail(s);}).join('<hr style="border:none;border-top:1px solid var(--border);margin:16px 0">');
+  showModal(fmtDate(ds),html);
+}
+
+function renderSessionDetail(s){
+  var skip={id:1,club_id:1,coach_id:1,created_at:1,updated_at:1,date:1,session_date:1};
+  var title=s.name||s.titre||s.title||'Séance';
+  var html='<div style="font-weight:700;font-size:.95rem;margin-bottom:8px">'+esc(title)+'</div>';
+  var dist=sessionDist(s);
+  if(dist)html+='<div style="font-size:.8rem;color:var(--c1);font-weight:600;margin-bottom:8px">'+fmtDist(dist)+'</div>';
+  Object.keys(s).forEach(function(k){
+    if(skip[k]||k==='name'||k==='titre'||k==='title'||k==='distance'||k==='total_distance'||k==='total'||k==='volume'||k==='km')return;
+    var v=s[k];
+    if(v==null||v==='')return;
+    var txt;
+    if(typeof v==='string'||typeof v==='number'){txt=String(v);}
+    else if(Array.isArray(v)){
+      txt=v.map(function(it){
+        if(typeof it==='string')return it;
+        if(it&&typeof it==='object')return Object.values(it).filter(function(x){return typeof x==='string'||typeof x==='number';}).join(' — ');
+        return '';
+      }).filter(Boolean).join('\n');
+    }
+    else if(typeof v==='object'){
+      txt=Object.values(v).filter(function(x){return typeof x==='string'||typeof x==='number';}).join(' — ');
+    }
+    if(!txt)return;
+    html+='<div style="margin-bottom:8px"><div class="f-label">'+esc(k.replace(/_/g,' '))+'</div>'
+      +'<div style="font-size:.83rem;white-space:pre-wrap">'+esc(txt)+'</div></div>';
+  });
+  return html;
+}
+
+// ── 3. PERFORMANCES ──
+function setBassin(b){
+  _bassin=b;
+  document.getElementById('bassin-25').classList.toggle('active',b===25);
+  document.getElementById('bassin-50').classList.toggle('active',b===50);
+  renderPerfs();
+}
+
+function seasonStart(){
+  var now=new Date();
+  var y=now.getMonth()>=8?now.getFullYear():now.getFullYear()-1;
+  return y+'-09-01';
+}
+
+function renderPerfs(){
+  var eps=_bassin===25?EPREUVES_25:EPREUVES_50;
+  var ss=seasonStart();
+  var html='';
+  eps.forEach(function(e){
+    e.distances.forEach(function(d){
+      var mine=_perfs.filter(function(p){
+        return Number(p.bassin)===_bassin&&p.nage===e.nage&&Number(p.distance)===d;
+      });
+      var pb=null,sb=null;
+      mine.forEach(function(p){
+        var t=parseTemps(p.temps);
+        if(t===Infinity)return;
+        if(!pb||t<parseTemps(pb.temps))pb=p;
+        if(p.date>=ss&&(!sb||t<parseTemps(sb.temps)))sb=p;
+      });
+      html+='<div class="perf-row">'
+        +'<div class="perf-ep">'+NAGE_LABELS[e.nage]+' '+d+'m</div>'
+        +'<div class="perf-time"><span class="tag">SB</span>'+(sb?esc(sb.temps):'—')+'</div>'
+        +'<div class="perf-time pb"><span class="tag">PB</span>'+(pb?esc(pb.temps):'—')+'</div>'
+        +'</div>';
+    });
+  });
+  document.getElementById('perf-list').innerHTML=html;
+}
+
+function openAddPerf(){
+  var eps=_bassin===25?EPREUVES_25:EPREUVES_50;
+  var options='';
+  eps.forEach(function(e){
+    e.distances.forEach(function(d){
+      options+='<option value="'+e.nage+'_'+d+'">'+NAGE_LABELS[e.nage]+' '+d+'m</option>';
+    });
+  });
+  showModal('Ajouter une performance',
+    '<div class="f-label">Bassin</div>'
+    +'<select id="ap-bassin"><option value="25"'+(_bassin===25?' selected':'')+'>25 m</option><option value="50"'+(_bassin===50?' selected':'')+'>50 m</option></select>'
+    +'<div class="f-label">Épreuve</div>'
+    +'<select id="ap-epreuve">'+options+'</select>'
+    +'<div class="f-label">Date</div>'
+    +'<input type="date" id="ap-date" value="'+todayStr()+'">'
+    +'<div class="f-label">Temps</div>'
+    +'<input type="text" id="ap-temps" placeholder="ex: 1:02.45 ou 31.20" inputmode="decimal">'
+    +'<div class="msg err" id="ap-msg"></div>'
+    +'<button class="btn btn-primary btn-block" id="ap-btn" onclick="submitAddPerf()">ENREGISTRER</button>'
+  );
+  document.getElementById('ap-bassin').onchange=function(){
+    var eps2=this.value==='25'?EPREUVES_25:EPREUVES_50;
+    var o='';
+    eps2.forEach(function(e){e.distances.forEach(function(d){o+='<option value="'+e.nage+'_'+d+'">'+NAGE_LABELS[e.nage]+' '+d+'m</option>';});});
+    document.getElementById('ap-epreuve').innerHTML=o;
+  };
+}
+
+async function submitAddPerf(){
+  var msg=document.getElementById('ap-msg');
+  var btn=document.getElementById('ap-btn');
+  var bassin=parseInt(document.getElementById('ap-bassin').value,10);
+  var ep=document.getElementById('ap-epreuve').value.split('_');
+  var date=document.getElementById('ap-date').value;
+  var temps=document.getElementById('ap-temps').value.trim();
+  msg.textContent='';
+  if(!date||!temps){msg.textContent='Date et temps requis.';return;}
+  if(parseTemps(temps)===Infinity){msg.textContent='Format de temps invalide (ex: 1:02.45).';return;}
+  btn.disabled=true;
+  try{
+    var r=await fetch('/api/performances',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        clubId:_meta.clubId, coachId:_meta.coachId,
+        entries:[{nageur_nom:_swimmerNom, bassin:bassin, nage:ep[0], distance:parseInt(ep[1],10), temps:temps, date:date, note:''}]
+      })
+    });
+    var data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Erreur serveur');
+    _perfs.push({bassin:bassin,nage:ep[0],distance:parseInt(ep[1],10),temps:temps,date:date,note:''});
+    closeModal();
+    renderPerfs();
+    showToast('Performance enregistrée ✓');
+  }catch(e){
+    msg.textContent=e.message;
+    btn.disabled=false;
+  }
+}
+
+// ── 4. VIDÉOS ──
+var VID_ICON='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+
+function renderVideos(){
+  var coach=_videos.filter(function(v){return v.type!=='swimmer-upload';});
+  var mine=_videos.filter(function(v){return v.type==='swimmer-upload';});
+  document.getElementById('vid-coach-list').innerHTML=coach.length
+    ? coach.map(vidRow).join('')
+    : '<div class="empty">Aucune vidéo de ton coach pour le moment.</div>';
+  document.getElementById('vid-mine-list').innerHTML=mine.length
+    ? mine.map(vidRow).join('')
+    : '<div class="empty">Tu n\'as pas encore envoyé de vidéo.</div>';
+}
+
+function vidRow(v){
+  var i=_videos.indexOf(v);
+  return '<div class="vid-row" onclick="playVideo('+i+')">'
+    +'<div class="vid-thumb">'+VID_ICON+'</div>'
+    +'<div class="vid-info"><div class="vid-name">'+esc(v.name||'Vidéo')+'</div>'
+    +'<div class="vid-meta">'+fmtDate(v.date)+(v.notes?' · '+esc(v.notes):'')+'</div></div>'
+    +'</div>';
+}
+
+async function playVideo(i){
+  var v=_videos[i];
+  if(!v||!v.storage_path){showToast('Vidéo introuvable');return;}
+  showModal(v.name||'Vidéo','<div class="empty">Chargement de la vidéo…</div>');
+  try{
+    var q='clubId='+encodeURIComponent(_meta.clubId)+'&coachId='+encodeURIComponent(_meta.coachId)+'&storagePath='+encodeURIComponent(v.storage_path);
+    var r=await fetch('/api/videos?'+q);
+    var data=await r.json();
+    if(!r.ok||!data.signedUrl)throw new Error(data.error||'URL indisponible');
+    document.getElementById('modal-body').innerHTML=
+      '<video controls playsinline style="width:100%;border-radius:10px;background:#000" src="'+esc(data.signedUrl)+'"></video>'
+      +(v.notes?'<div style="font-size:.82rem;color:var(--muted);margin-top:10px">'+esc(v.notes)+'</div>':'');
+  }catch(e){
+    document.getElementById('modal-body').innerHTML='<div class="msg err">'+esc(e.message)+'</div>';
+  }
+}
+
+function openUploadVideo(){
+  showModal('Envoyer une vidéo',
+    '<div class="f-label">Fichier vidéo</div>'
+    +'<input type="file" id="uv-file" accept="video/*">'
+    +'<div class="f-label">Titre</div>'
+    +'<input type="text" id="uv-name" placeholder="ex: Virage crawl">'
+    +'<div class="f-label">Commentaire pour le coach</div>'
+    +'<textarea id="uv-notes" rows="3" placeholder="Optionnel"></textarea>'
+    +'<div class="msg" id="uv-msg"></div>'
+    +'<button class="btn btn-primary btn-block" id="uv-btn" onclick="submitUploadVideo()">ENVOYER</button>'
+  );
+}
+
+async function submitUploadVideo(){
+  var msg=document.getElementById('uv-msg');
+  var btn=document.getElementById('uv-btn');
+  var fileInput=document.getElementById('uv-file');
+  var file=fileInput.files&&fileInput.files[0];
+  var name=document.getElementById('uv-name').value.trim();
+  var notes=document.getElementById('uv-notes').value.trim();
+  msg.className='msg err';msg.textContent='';
+  if(!file){msg.textContent='Sélectionne un fichier vidéo.';return;}
+  btn.disabled=true;btn.textContent='ENVOI EN COURS…';
+  try{
+    var videoId=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2));
+    var ext=(file.name.split('.').pop()||'mp4').toLowerCase();
+    var q='clubId='+encodeURIComponent(_meta.clubId)+'&coachId='+encodeURIComponent(_meta.coachId)
+      +'&videoId='+encodeURIComponent(videoId)+'&ext='+encodeURIComponent(ext)
+      +'&contentType='+encodeURIComponent(file.type||'video/mp4');
+    var r1=await fetch('/api/videos-upload?'+q);
+    var d1=await r1.json();
+    if(!r1.ok||!d1.signedUrl)throw new Error(d1.error||'Signed URL indisponible');
+
+    var r2=await fetch(d1.signedUrl,{method:'PUT',headers:{'Content-Type':file.type||'video/mp4'},body:file});
+    if(!r2.ok)throw new Error('Échec de l\'upload ('+r2.status+')');
+
+    var meta={
+      clubId:_meta.clubId, coachId:_meta.coachId,
+      swimmerId:_user.id,
+      swimmerPrenom:_meta.firstName||'', swimmerNom:_meta.lastName||'',
+      videoId:videoId,
+      name:name||file.name,
+      date:todayStr(),
+      type:'swimmer-upload',
+      notes:notes,
+      storagePath:d1.storagePath,
+      annotations:[]
+    };
+    var r3=await fetch('/api/videos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});
+    var d3=await r3.json();
+    if(!r3.ok)throw new Error(d3.error||'Erreur métadonnées');
+
+    _videos.push({id:videoId,swimmer_id:_user.id,name:meta.name,date:meta.date,type:'swimmer-upload',notes:notes,storage_path:d1.storagePath});
+    closeModal();
+    renderVideos();
+    showToast('Vidéo envoyée à ton coach ✓');
+  }catch(e){
+    msg.textContent=e.message;
+    btn.disabled=false;btn.textContent='ENVOYER';
+  }
+}
+
+// ── 5. SANTÉ ──
+async function addHrv(){
+  var date=document.getElementById('hrv-date').value;
+  var val=parseFloat(document.getElementById('hrv-val').value);
+  var msg=document.getElementById('hrv-msg');
+  var btn=document.getElementById('hrv-btn');
+  msg.className='msg err';msg.textContent='';
+  if(!date||!val||val<=0){msg.textContent='Date et valeur RMSSD requises.';return;}
+  btn.disabled=true;
+  try{
+    var r=await fetch('/api/hrv',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        clubId:_meta.clubId, coachId:_meta.coachId,
+        entries:[{nageur_nom:_swimmerNom, date:date, rmssd:val, source:'manual', commentaire:''}]
+      })
+    });
+    var data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Erreur serveur');
+    _hrv=_hrv.filter(function(h){return h.date!==date;});
+    _hrv.push({date:date,rmssd:val,note:null,source:'manual'});
+    _hrv.sort(function(a,b){return a.date<b.date?-1:1;});
+    document.getElementById('hrv-val').value='';
+    msg.className='msg ok';msg.textContent='Mesure enregistrée ✓';
+    renderSanteCharts();
+    renderDashboard();
+  }catch(e){
+    msg.textContent=e.message;
+  }
+  btn.disabled=false;
+}
+
+async function addPoids(){
+  var date=document.getElementById('poids-date').value;
+  var val=parseFloat(document.getElementById('poids-val').value);
+  var msg=document.getElementById('poids-msg');
+  var btn=document.getElementById('poids-btn');
+  msg.className='msg err';msg.textContent='';
+  if(!date||!val||val<=0){msg.textContent='Date et poids requis.';return;}
+  btn.disabled=true;
+  try{
+    var r=await fetch('/api/poids',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        clubId:_meta.clubId, coachId:_meta.coachId,
+        entries:[{prenom:_meta.firstName||'', nom:_meta.lastName||'', date:date, weight:val}]
+      })
+    });
+    var data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Erreur serveur');
+    _poids=_poids.filter(function(p){return p.date!==date;});
+    _poids.push({date:date,weight:val});
+    _poids.sort(function(a,b){return a.date<b.date?-1:1;});
+    document.getElementById('poids-val').value='';
+    msg.className='msg ok';msg.textContent='Mesure enregistrée ✓';
+    renderSanteCharts();
+    renderDashboard();
+  }catch(e){
+    msg.textContent=e.message;
+  }
+  btn.disabled=false;
+}
+
+function last30(arr,valueKey){
+  var cutoff=new Date();
+  cutoff.setDate(cutoff.getDate()-30);
+  var cs=cutoff.toISOString().slice(0,10);
+  return arr.filter(function(e){return e.date>=cs&&e[valueKey]!=null;});
+}
+
+function renderSanteCharts(){
+  var css=getComputedStyle(document.documentElement);
+  var c1=css.getPropertyValue('--c1').trim();
+  var c2=css.getPropertyValue('--c2').trim();
+  var muted=css.getPropertyValue('--muted').trim();
+  var border=css.getPropertyValue('--border').trim();
+  var opts=function(){
+    return {
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:muted,font:{size:10}},grid:{display:false}},
+        y:{ticks:{color:muted,font:{size:10}},grid:{color:border}}
+      }
+    };
+  };
+
+  var hd=last30(_hrv,'rmssd');
+  if(_chartHrv)_chartHrv.destroy();
+  _chartHrv=new Chart(document.getElementById('chart-hrv'),{
+    type:'line',
+    data:{
+      labels:hd.map(function(e){return e.date.slice(5);}),
+      datasets:[{data:hd.map(function(e){return e.rmssd;}),borderColor:c1,backgroundColor:c1,tension:.3,pointRadius:3}]
+    },
+    options:opts()
+  });
+
+  var pd=last30(_poids,'weight');
+  if(_chartPoids)_chartPoids.destroy();
+  _chartPoids=new Chart(document.getElementById('chart-poids'),{
+    type:'line',
+    data:{
+      labels:pd.map(function(e){return e.date.slice(5);}),
+      datasets:[{data:pd.map(function(e){return e.weight;}),borderColor:c2,backgroundColor:c2,tension:.3,pointRadius:3}]
+    },
+    options:opts()
+  });
+}
+
+function wearablePlaceholder(name){
+  showToast(name+' — Bientôt disponible');
+}
+
+// ── 6. RÉGLAGES ──
+function initSettingsUI(){
+  document.getElementById('set-firstname').value=_meta.firstName||'';
+  document.getElementById('set-lastname').value=_meta.lastName||'';
+  document.getElementById('set-lang').value=_lang;
+}
+
+async function saveProfile(){
+  var fn=document.getElementById('set-firstname').value.trim();
+  var ln=document.getElementById('set-lastname').value.trim();
+  var msg=document.getElementById('set-profile-msg');
+  msg.className='msg err';msg.textContent='';
+  if(!fn){msg.textContent='Prénom requis.';return;}
+  var res=await _supabase.auth.updateUser({data:{firstName:fn,lastName:ln}});
+  if(res.error){msg.textContent=res.error.message;return;}
+  _meta.firstName=fn;_meta.lastName=ln;
+  _swimmerNom=(fn+' '+ln).trim();
+  document.getElementById('hdr-name').textContent=fn;
+  renderDashboardStatic();
+  msg.className='msg ok';msg.textContent='Profil mis à jour ✓';
+}
+
+async function saveLang(){
+  _lang=document.getElementById('set-lang').value;
+  localStorage.setItem('swimmerLang',_lang);
+  try{await _supabase.auth.updateUser({data:{lang:_lang}});}catch(e){}
+  renderDashboardStatic();
+  renderCalendar();
+  showToast('Langue enregistrée ✓');
+}
+
+function setTheme(t,silent){
+  document.documentElement.setAttribute('data-theme',t);
+  localStorage.setItem('swimmerTheme',t);
+  var lb=document.getElementById('theme-light'),db=document.getElementById('theme-dark');
+  if(lb)lb.classList.toggle('active',t==='light');
+  if(db)db.classList.toggle('active',t==='dark');
+  if(!silent){
+    _supabase.auth.updateUser({data:{swimmerTheme:t}}).catch(function(){});
+    renderSanteCharts();
+  }
+}
+
+async function saveColors(){
+  var c1=document.getElementById('set-c1').value;
+  var c2=document.getElementById('set-c2').value;
+  _meta.swimmerColor1=c1;_meta.swimmerColor2=c2;
+  applyColors();
+  renderSanteCharts();
+  try{await _supabase.auth.updateUser({data:{swimmerColor1:c1,swimmerColor2:c2}});}catch(e){}
+}
+
+async function resetColors(){
+  delete _meta.swimmerColor1;
+  delete _meta.swimmerColor2;
+  applyColors();
+  renderSanteCharts();
+  try{await _supabase.auth.updateUser({data:{swimmerColor1:null,swimmerColor2:null}});}catch(e){}
+  showToast('Couleurs du club restaurées ✓');
+}
+
+async function changePassword(){
+  var p1=document.getElementById('set-pw1').value;
+  var p2=document.getElementById('set-pw2').value;
+  var msg=document.getElementById('set-pw-msg');
+  msg.className='msg err';msg.textContent='';
+  if(p1.length<6){msg.textContent='Minimum 6 caractères.';return;}
+  if(p1!==p2){msg.textContent='Les mots de passe ne correspondent pas.';return;}
+  var res=await _supabase.auth.updateUser({password:p1});
+  if(res.error){msg.textContent=res.error.message;return;}
+  document.getElementById('set-pw1').value='';
+  document.getElementById('set-pw2').value='';
+  msg.className='msg ok';msg.textContent='Mot de passe modifié ✓';
+}
+
+async function doSignOut(){
+  try{await _supabase.auth.signOut();}catch(e){}
+  window.location.href='/login.html';
+}
+
+// ── COMPLÉTION COMPTE ──
+async function submitCompletion(){
+  var fn=document.getElementById('cov-firstname').value.trim();
+  var ln=document.getElementById('cov-lastname').value.trim();
+  var pw=document.getElementById('cov-password').value;
+  var msg=document.getElementById('cov-msg');
+  var btn=document.getElementById('cov-btn');
+  msg.textContent='';
+  if(!fn||!ln){msg.textContent='Prénom et nom requis.';return;}
+  if(pw.length<6){msg.textContent='Mot de passe : 6 caractères minimum.';return;}
+  btn.disabled=true;btn.textContent='CRÉATION…';
+  var res=await _supabase.auth.updateUser({password:pw,data:{passwordSet:true,firstName:fn,lastName:ln}});
+  if(res.error){
+    msg.textContent=res.error.message;
+    btn.disabled=false;btn.textContent='ACCÉDER À MON ESPACE';
+    return;
+  }
+  _meta.passwordSet=true;_meta.firstName=fn;_meta.lastName=ln;
+  _swimmerNom=(fn+' '+ln).trim();
+  document.getElementById('hdr-name').textContent=fn;
+  document.getElementById('complete-ov').classList.remove('show');
+  initSettingsUI();
+  renderDashboardStatic();
+  await loadAllData();
+  renderDashboard();
+  renderCalendar();
+  showToast('Bienvenue '+fn+' 👋');
+}
+</script>
+</body>
+</html>
