@@ -278,6 +278,24 @@ async function submitForgot(){
 
 // ── DÉTECTION TOKEN D'INVITATION SUPABASE ──
 (function detectInvite(){
+  // Flux PKCE : ?code=...
+  var searchParams = new URLSearchParams(window.location.search);
+  var code = searchParams.get('code');
+  if (code) {
+    history.replaceState(null, '', window.location.pathname);
+    _sb.auth.exchangeCodeForSession(code).then(function(res){
+      if (res.error) {
+        showState('login');
+        var msg = document.getElementById('login-msg');
+        if (msg) msg.textContent = 'Lien invalide ou expiré. Demandez une nouvelle invitation.';
+        return;
+      }
+      showState('set-password');
+    });
+    return;
+  }
+
+  // Flux implicite : #access_token=...
   var hash = window.location.hash.substring(1);
   if (!hash) return;
   var params = {};
