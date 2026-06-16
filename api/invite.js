@@ -54,14 +54,13 @@ export default async function handler(req) {
 
   // Insert dans la table swimmers (uniquement pour le rôle swimmer)
   if (_role === 'swimmer' && userId) {
-    const { error: insertErr } = await sb.from('swimmers').insert({
+    const { error: insertErr } = await sb.from('nageurs').insert({
       id: userId,
       coach_id: coachId || null,
       club_id: clubId || null,
-      first_name: firstName || '',
-      last_name: lastName || '',
+      prenom: firstName || '',
+      nom: lastName || '',
       email: email,
-      status: 'invited',
     });
     if (insertErr) {
       console.error('[invite] swimmers insert error:', insertErr);
