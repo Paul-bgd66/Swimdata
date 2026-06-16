@@ -141,6 +141,20 @@
     <button class="link-btn back-link" onclick="showState('home')">← Retour</button>
   </div>
 
+  <!-- ÉTAT 4 : DÉFINIR MOT DE PASSE (invitation nageur) -->
+  <div class="state" id="state-set-password">
+    <p style="color:rgba(255,255,255,.6);font-size:.82rem;margin-bottom:18px;text-align:center;">
+      Bienvenue ! Choisissez un mot de passe pour activer votre compte.
+    </p>
+    <div class="field-label">Mot de passe</div>
+    <input type="password" id="invite-password" placeholder="Minimum 6 caractères" autocomplete="new-password">
+    <div class="field-label">Confirmer</div>
+    <input type="password" id="invite-password2" placeholder="Répétez le mot de passe" autocomplete="new-password"
+      onkeydown="if(event.key==='Enter')submitSetPassword()">
+    <div class="msg" id="invite-msg"></div>
+    <button class="btn btn-primary" id="invite-btn" onclick="submitSetPassword()">ACTIVER MON COMPTE</button>
+  </div>
+
   <!-- ÉTAT 3 : S'INSCRIRE -->
   <div class="state" id="state-signup">
     <div class="field-label">Prénom</div>
@@ -166,7 +180,7 @@ var _SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv';
 var _sb = supabase.createClient(_SB_URL, _SB_ANON);
 
 function showState(name){
-  ['home','login','signup'].forEach(function(s){
+  ['home','login','signup','set-password'].forEach(function(s){
     var el=document.getElementById('state-'+s);
     if(el)el.classList.toggle('active', s===name);
   });
@@ -231,6 +245,22 @@ function toggleForgot(){
   s.style.display = s.style.display === 'block' ? 'none' : 'block';
 }
 
+async function submitSetPassword(){
+  var p1  = document.getElementById('invite-password').value;
+  var p2  = document.getElementById('invite-password2').value;
+  var msg = document.getElementById('invite-msg');
+  var btn = document.getElementById('invite-btn');
+  msg.className = 'msg err'; msg.textContent = '';
+  if (!p1) { msg.textContent = 'Mot de passe requis.'; return; }
+  if (p1.length < 6) { msg.textContent = 'Minimum 6 caractères.'; return; }
+  if (p1 !== p2) { msg.textContent = 'Les mots de passe ne correspondent pas.'; return; }
+  btn.disabled = true; btn.textContent = 'ACTIVATION…';
+  var res = await _sb.auth.updateUser({ password: p1 });
+  btn.disabled = false; btn.textContent = 'ACTIVER MON COMPTE';
+  if (res.error) { msg.textContent = res.error.message; return; }
+  window.location.href = '/swimmer.html';
+}
+
 async function submitForgot(){
   var email = document.getElementById('forgot-email').value.trim();
   var msg = document.getElementById('forgot-msg');
@@ -245,6 +275,33 @@ async function submitForgot(){
   msg.textContent = '✅ Lien envoyé — vérifiez votre boite mail.';
 }
 
+
+// ── DÉTECTION TOKEN D'INVITATION SUPABASE ──
+(function detectInvite(){
+  var hash = window.location.hash.substring(1);
+  if (!hash) return;
+  var params = {};
+  hash.split('&').forEach(function(p){
+    var kv = p.split('=');
+    params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+  });
+  if (params.type !== 'invite' || !params.access_token) return;
+  // Nettoyer le hash de l'URL sans recharger la page
+  history.replaceState(null, '', window.location.pathname);
+  // Établir la session Supabase avec le token d'invitation
+  _sb.auth.setSession({
+    access_token: params.access_token,
+    refresh_token: params.refresh_token || ''
+  }).then(function(res){
+    if (res.error) {
+      showState('login');
+      var msg = document.getElementById('login-msg');
+      if (msg) msg.textContent = 'Lien invalide ou expiré. Demandez une nouvelle invitation.';
+      return;
+    }
+    showState('set-password');
+  });
+})();
 </script>
 </body>
 </html>
