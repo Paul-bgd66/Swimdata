@@ -7984,6 +7984,14 @@ initDefaultClubs();
     };
     _clubs.push(_club);saveClubs(_clubs);
   }
+  // Récupérer le vrai club_id depuis la table coaches (écrase l'ID synthétique local)
+  try{
+    var _coachRow=await _supabase.from('coaches').select('club_id').eq('id',_user.id).maybeSingle();
+    if(_coachRow&&_coachRow.data&&_coachRow.data.club_id){
+      _club.id=_coachRow.data.club_id;
+      saveClubs(_clubs);
+    }
+  }catch(e){console.warn('[auth] coaches club_id lookup:',e.message);}
   currentClub=_club;
   // Construit le coach à partir de Supabase user (id = user.id)
   var _coach={
