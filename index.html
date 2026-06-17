@@ -5385,6 +5385,7 @@ function launchApp(coach){
       if(changed){localStorage.setItem(_mergeKey,JSON.stringify(DB));renderSB();}
     })
     .catch(function(e){console.warn('[launchApp] sessions merge:',e);});
+  _mergeNageursFromApi();
   _mergeHRVFromApi();
   _mergePoidsFromApi();
   _mergePerfFromApi();
@@ -6108,6 +6109,8 @@ async function inviterNageurSupabase(){
     var d=await r.json();
     if(!r.ok||d.error){if(msgEl){msgEl.textContent=d.error||'Erreur';msgEl.style.color='#ef4444';}return;}
     if(msgEl){msgEl.textContent='✅ Invitation envoyée à '+email;msgEl.style.color='#16a34a';}
+    addSwimmer({firstName:firstName,lastName:lastName,email:email});
+    renderSwimmerManage();
     if(fnEl)fnEl.value='';if(lnEl)lnEl.value='';inp.value='';
   }catch(e){if(msgEl){msgEl.textContent='Erreur réseau';msgEl.style.color='#ef4444';}}
 }
@@ -6784,6 +6787,31 @@ function saveHRVDB(db){
     fetch('/api/hrv',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({clubId:currentClub.id,coachId:currentCoachId,entries:toSync})})
       .catch(function(e){console.warn('[saveHRVDB sync]',e.message);});
   }
+}
+
+async function _mergeNageursFromApi(){
+  if(!currentClub||!currentCoachId)return;
+  try{
+    var r=await fetch('/api/nageurs?coachId='+encodeURIComponent(currentCoachId)+'&clubId='+encodeURIComponent(currentClub.id));
+    if(!r.ok)return;
+    var data=await r.json();
+    if(!data||!data.length)return;
+    var existing=getSwimmers();
+    var existingIds=existing.map(function(s){return s.id;});
+    var changed=false;
+    data.forEach(function(n){
+      if(existingIds.indexOf(n.id)===-1){
+        existing.push({id:n.id,firstName:n.prenom,lastName:n.nom,email:n.email||'',photo:null,createdAt:n.created_at||new Date().toISOString()});
+        changed=true;
+      }
+    });
+    if(changed){
+      localStorage.setItem(swimmersKey(),JSON.stringify(existing));
+      if(typeof renderSwimmerManage==='function')renderSwimmerManage();
+      if(typeof renderSwimmerGrid==='function')renderSwimmerGrid();
+      if(typeof renderGFBar==='function')renderGFBar();
+    }
+  }catch(e){console.warn('[_mergeNageursFromApi]',e.message);}
 }
 
 function _mergeHRVFromApi(){
@@ -7984,11 +8012,19 @@ initDefaultClubs();
     };
     _clubs.push(_club);saveClubs(_clubs);
   }
-  // Récupérer le vrai club_id depuis la table coaches (écrase l'ID synthétique local)
+  // Récupérer le vrai club_id depuis la table coaches
+  // Essai 1 : par Supabase auth UUID (nouveaux comptes)
+  // Essai 2 : par email (comptes migrés avec ancien ID local)
   try{
-    var _coachRow=await _supabase.from('coaches').select('club_id').eq('id',_user.id).maybeSingle();
-    if(_coachRow&&_coachRow.data&&_coachRow.data.club_id){
-      _club.id=_coachRow.data.club_id;
+    var _coachData=null;
+    var _r1=await _supabase.from('coaches').select('club_id').eq('id',_user.id).maybeSingle();
+    if(_r1&&_r1.data&&_r1.data.club_id)_coachData=_r1.data;
+    if(!_coachData&&_user.email){
+      var _r2=await _supabase.from('coaches').select('club_id').eq('email',_user.email).maybeSingle();
+      if(_r2&&_r2.data&&_r2.data.club_id)_coachData=_r2.data;
+    }
+    if(_coachData&&_coachData.club_id){
+      _club.id=_coachData.club_id;
       saveClubs(_clubs);
     }
   }catch(e){console.warn('[auth] coaches club_id lookup:',e.message);}

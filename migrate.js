@@ -103,6 +103,7 @@ async function main() {
     club_id: 'moz9da6ny54zkojwig',
     name: 'Paul',
     role: 'manager',
+    email: 'paulobgd@icloud.com',
   };
   process.stdout.write(`  coaches ← ${JSON.stringify(coach)}\n  → `);
   const coachResult = await upsert('coaches', coach);
