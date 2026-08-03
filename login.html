@@ -158,11 +158,9 @@
 
   <!-- ÉTAT 5 : SUCCÈS ACTIVATION -->
   <div class="state" id="state-success">
-    <p style="text-align:center;font-size:1.5rem;margin-bottom:16px">✅</p>
-    <p style="color:rgba(255,255,255,.8);font-size:.9rem;text-align:center;line-height:1.6;margin-bottom:24px;">
-      Compte créé !<br>Rendez-vous sur l'application pour vous connecter.
-    </p>
-    <button class="btn btn-primary" onclick="signOutAndRedirect()">SE CONNECTER</button>
+    <p style="text-align:center;font-size:1.5rem;margin-bottom:12px">✅</p>
+    <p id="success-welcome" style="color:rgba(255,255,255,.9);font-size:1rem;font-weight:600;text-align:center;margin-bottom:8px"></p>
+    <p style="color:rgba(255,255,255,.5);font-size:.82rem;text-align:center;">Redirection en cours…</p>
   </div>
 
   <!-- ÉTAT 3 : S'INSCRIRE -->
@@ -188,6 +186,8 @@
 var _SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co';
 var _SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv';
 var _sb = supabase.createClient(_SB_URL, _SB_ANON);
+
+var _pkceUser = null;
 
 function showState(name){
   ['home','login','signup','set-password','success'].forEach(function(s){
@@ -268,7 +268,7 @@ async function submitSetPassword(){
   var res = await _sb.auth.updateUser({ password: p1 });
   btn.disabled = false; btn.textContent = 'ACTIVER MON COMPTE';
   if (res.error) { msg.textContent = res.error.message; return; }
-  showState('success');
+  showWelcomeAndRedirect();
 }
 
 async function submitForgot(){
@@ -286,12 +286,14 @@ async function submitForgot(){
 }
 
 
-async function signOutAndRedirect(){
-  try{await _sb.auth.signOut();}catch(e){}
-  history.replaceState(null, '', window.location.pathname);
-  window.location.href = '/login.html';
+function showWelcomeAndRedirect(){
+  var firstName = (_pkceUser && _pkceUser.user_metadata && _pkceUser.user_metadata.firstName) || '';
+  var el = document.getElementById('success-welcome');
+  if(el) el.textContent = 'Bienvenue' + (firstName ? ' ' + firstName : '') + ' ! Ton compte est prêt.';
+  showState('success');
+  setTimeout(function(){ window.location.href = '/swimmer.html'; }, 2000);
 }
-window.signOutAndRedirect = signOutAndRedirect;
+window.showWelcomeAndRedirect = showWelcomeAndRedirect;
 
 // ── DÉTECTION TOKEN D'INVITATION SUPABASE ──
 (function detectInvite(){
@@ -307,9 +309,10 @@ window.signOutAndRedirect = signOutAndRedirect;
         if (msg) msg.textContent = 'Lien invalide ou expiré. Demandez une nouvelle invitation.';
         return;
       }
+      _pkceUser = (res.data && res.data.user) || null;
       var emailInfo = document.getElementById('invite-email-info');
-      if (emailInfo && res.data && res.data.user && res.data.user.email) {
-        emailInfo.textContent = res.data.user.email;
+      if (emailInfo && _pkceUser && _pkceUser.email) {
+        emailInfo.textContent = _pkceUser.email;
         emailInfo.style.display = 'block';
       }
       showState('set-password');

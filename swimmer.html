@@ -432,13 +432,28 @@
   <section class="tab" id="tab-sante">
     <div class="page-title">Santé</div>
     <div class="card">
-      <div class="card-label">HRV — ajouter une mesure</div>
-      <div class="set-row">
-        <div><div class="f-label">Date</div><input type="date" id="hrv-date"></div>
-        <div><div class="f-label">RMSSD (ms)</div><input type="number" id="hrv-val" placeholder="ex: 65" inputmode="decimal"></div>
+      <div class="card-label">HRV — importer depuis EliteHRV</div>
+      <div><div class="f-label">Date</div><input type="date" id="hrv-date"></div>
+      <div id="hrv-upload-zone"
+           onclick="document.getElementById('hrv-rr-input').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--c1,#2176e8)'"
+           ondragleave="this.style.borderColor='var(--border,#e5e7eb)'"
+           ondrop="event.preventDefault();this.style.borderColor='var(--border,#e5e7eb)';addHrvRR(event.dataTransfer.files[0])"
+           style="border:2px dashed var(--border,#e5e7eb);border-radius:10px;padding:24px 16px;text-align:center;cursor:pointer;margin:10px 0;transition:border-color .2s">
+        <div style="font-size:1.4rem;margin-bottom:6px">📂</div>
+        <div style="font-size:.84rem;font-weight:600">Importer un fichier RR</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Glisse ou clique — format .txt EliteHRV</div>
       </div>
-      <button class="btn btn-primary btn-block" id="hrv-btn" onclick="addHrv()">ENREGISTRER</button>
+      <input type="file" id="hrv-rr-input" accept=".txt,.csv" style="display:none" onchange="if(this.files[0])addHrvRR(this.files[0])">
       <div class="msg" id="hrv-msg"></div>
+      <details style="margin-top:8px">
+        <summary style="font-size:.78rem;color:var(--muted);cursor:pointer;padding:4px 0;user-select:none">Saisie manuelle (sans export)</summary>
+        <div style="margin-top:10px">
+          <div class="f-label">RMSSD (ms)</div>
+          <input type="number" id="hrv-val" placeholder="ex: 65" inputmode="decimal">
+          <button class="btn btn-outline btn-block" id="hrv-btn" onclick="addHrv()" style="margin-top:4px">ENREGISTRER</button>
+        </div>
+      </details>
       <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
     </div>
     <div class="card">
@@ -1116,6 +1131,47 @@ async function addHrv(){
   }
   btn.disabled=false;
 }
+
+async function addHrvRR(file){
+  var msg=document.getElementById('hrv-msg');
+  var date=document.getElementById('hrv-date').value;
+  msg.className='msg err';msg.textContent='';
+  if(!file)return;
+  if(!date){msg.className='msg err';msg.textContent='Sélectionne une date.';return;}
+  msg.className='msg mute';msg.textContent='Analyse en cours…';
+  try{
+    var text=await file.text();
+    var lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+    var rr=[];
+    lines.forEach(function(line){
+      var clean=line.trim().replace(',','.');
+      if(!clean)return;
+      var v=parseFloat(clean);
+      if(!isNaN(v)&&v>=300&&v<=2000)rr.push(v);
+    });
+    if(rr.length<50){msg.className='msg err';msg.textContent='⚠️ Fichier insuffisant — '+rr.length+' intervalles trouvés (minimum 50 requis).';return;}
+    var diffs=rr.slice(1).map(function(v,i){return v-rr[i];});
+    var rmssd=Math.round(Math.sqrt(diffs.reduce(function(a,b){return a+b*b;},0)/diffs.length)*10)/10;
+    var r=await fetch('/api/hrv',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        clubId:_meta.clubId,coachId:_meta.coachId,
+        entries:[{nageur_nom:_swimmerNom,date:date,rmssd:rmssd,source:'rr',commentaire:''}]
+      })
+    });
+    var data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Erreur serveur');
+    _hrv=_hrv.filter(function(h){return h.date!==date;});
+    _hrv.push({date:date,rmssd:rmssd,note:null,source:'rr'});
+    _hrv.sort(function(a,b){return a.date<b.date?-1:1;});
+    document.getElementById('hrv-rr-input').value='';
+    msg.className='msg ok';msg.textContent='RMSSD '+rmssd+' ms enregistré ✓';
+    renderSanteCharts();
+    renderDashboard();
+  }catch(e){msg.className='msg err';msg.textContent=e.message;}
+}
+window.addHrvRR=addHrvRR;
 
 async function addPoids(){
   var date=document.getElementById('poids-date').value;
