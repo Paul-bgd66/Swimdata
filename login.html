@@ -146,6 +146,7 @@
     <p style="color:rgba(255,255,255,.6);font-size:.82rem;margin-bottom:18px;text-align:center;">
       Bienvenue ! Choisissez un mot de passe pour activer votre compte.
     </p>
+    <div id="invite-email-info" style="display:none;font-size:.78rem;color:rgba(255,255,255,.45);text-align:center;margin-bottom:16px"></div>
     <div class="field-label">Mot de passe</div>
     <input type="password" id="invite-password" placeholder="Minimum 6 caractères" autocomplete="new-password">
     <div class="field-label">Confirmer</div>
@@ -153,6 +154,15 @@
       onkeydown="if(event.key==='Enter')submitSetPassword()">
     <div class="msg" id="invite-msg"></div>
     <button class="btn btn-primary" id="invite-btn" onclick="submitSetPassword()">ACTIVER MON COMPTE</button>
+  </div>
+
+  <!-- ÉTAT 5 : SUCCÈS ACTIVATION -->
+  <div class="state" id="state-success">
+    <p style="text-align:center;font-size:1.5rem;margin-bottom:16px">✅</p>
+    <p style="color:rgba(255,255,255,.8);font-size:.9rem;text-align:center;line-height:1.6;margin-bottom:24px;">
+      Compte créé !<br>Rendez-vous sur l'application pour vous connecter.
+    </p>
+    <button class="btn btn-primary" onclick="signOutAndRedirect()">SE CONNECTER</button>
   </div>
 
   <!-- ÉTAT 3 : S'INSCRIRE -->
@@ -180,7 +190,7 @@ var _SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv';
 var _sb = supabase.createClient(_SB_URL, _SB_ANON);
 
 function showState(name){
-  ['home','login','signup','set-password'].forEach(function(s){
+  ['home','login','signup','set-password','success'].forEach(function(s){
     var el=document.getElementById('state-'+s);
     if(el)el.classList.toggle('active', s===name);
   });
@@ -258,7 +268,7 @@ async function submitSetPassword(){
   var res = await _sb.auth.updateUser({ password: p1 });
   btn.disabled = false; btn.textContent = 'ACTIVER MON COMPTE';
   if (res.error) { msg.textContent = res.error.message; return; }
-  window.location.href = '/swimmer.html';
+  showState('success');
 }
 
 async function submitForgot(){
@@ -276,6 +286,13 @@ async function submitForgot(){
 }
 
 
+async function signOutAndRedirect(){
+  try{await _sb.auth.signOut();}catch(e){}
+  history.replaceState(null, '', window.location.pathname);
+  window.location.href = '/login.html';
+}
+window.signOutAndRedirect = signOutAndRedirect;
+
 // ── DÉTECTION TOKEN D'INVITATION SUPABASE ──
 (function detectInvite(){
   // Flux PKCE : ?code=...
@@ -289,6 +306,11 @@ async function submitForgot(){
         var msg = document.getElementById('login-msg');
         if (msg) msg.textContent = 'Lien invalide ou expiré. Demandez une nouvelle invitation.';
         return;
+      }
+      var emailInfo = document.getElementById('invite-email-info');
+      if (emailInfo && res.data && res.data.user && res.data.user.email) {
+        emailInfo.textContent = res.data.user.email;
+        emailInfo.style.display = 'block';
       }
       showState('set-password');
     });
