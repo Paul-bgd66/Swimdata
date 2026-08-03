@@ -207,9 +207,11 @@
   .bassin-btn.active{border-color:var(--c1);color:var(--c1);background:color-mix(in srgb, var(--c1) 8%, transparent)}
   .perf-row{
     display:flex;align-items:center;gap:10px;
-    padding:11px 0;border-bottom:1px solid var(--border);
+    padding:11px 8px;border-bottom:1px solid var(--border);
+    cursor:pointer;transition:background .15s;border-radius:6px;margin:0 -8px;
   }
   .perf-row:last-child{border-bottom:none}
+  .perf-row:hover{background:var(--border)}
   .perf-ep{flex:1;font-size:.85rem;font-weight:600}
   .perf-time{font-size:.82rem;min-width:74px;text-align:right;font-variant-numeric:tabular-nums}
   .perf-time .tag{display:block;font-size:.55rem;font-weight:700;letter-spacing:1px;color:var(--muted)}
@@ -927,7 +929,7 @@ function renderPerfs(){
         if(!pb||t<parseTemps(pb.temps))pb=p;
         if(p.date>=ss&&(!sb||t<parseTemps(sb.temps)))sb=p;
       });
-      html+='<div class="perf-row">'
+      html+='<div class="perf-row" onclick="openPerfHistoriqueNageur(\''+e.nage+'\','+d+')">'
         +'<div class="perf-ep">'+NAGE_LABELS[e.nage]+' '+d+'m</div>'
         +'<div class="perf-time"><span class="tag">SB</span>'+(sb?esc(sb.temps):'—')+'</div>'
         +'<div class="perf-time pb"><span class="tag">PB</span>'+(pb?esc(pb.temps):'—')+'</div>'
@@ -964,6 +966,26 @@ function openAddPerf(){
     document.getElementById('ap-epreuve').innerHTML=o;
   };
 }
+
+function openPerfHistoriqueNageur(nage,distance){
+  var mine=_perfs.filter(function(p){
+    return Number(p.bassin)===_bassin&&p.nage===nage&&Number(p.distance)===distance;
+  }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var html='<div>';
+  if(!mine.length){
+    html+='<div style="text-align:center;padding:20px;color:var(--muted)">Aucune performance enregistrée.</div>';
+  }else{
+    mine.forEach(function(p){
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">'
+        +'<div style="font-size:.85rem;color:var(--muted)">'+esc(fmtDate(p.date))+'</div>'
+        +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.15rem;color:var(--c1);font-variant-numeric:tabular-nums">'+esc(p.temps)+'</div>'
+        +'</div>';
+    });
+  }
+  html+='</div>';
+  showModal((NAGE_LABELS[nage]||nage)+' '+distance+'m',html);
+}
+window.openPerfHistoriqueNageur=openPerfHistoriqueNageur;
 
 async function submitAddPerf(){
   var msg=document.getElementById('ap-msg');
