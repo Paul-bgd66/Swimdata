@@ -265,7 +265,7 @@ async function submitSetPassword(){
   if (p1.length < 6) { msg.textContent = 'Minimum 6 caractères.'; return; }
   if (p1 !== p2) { msg.textContent = 'Les mots de passe ne correspondent pas.'; return; }
   btn.disabled = true; btn.textContent = 'ACTIVATION…';
-  var res = await _sb.auth.updateUser({ password: p1 });
+  var res = await _sb.auth.updateUser({ password: p1, data: { passwordSet: true } });
   btn.disabled = false; btn.textContent = 'ACTIVER MON COMPTE';
   if (res.error) { msg.textContent = res.error.message; return; }
   showWelcomeAndRedirect();

@@ -5639,11 +5639,13 @@ function _mergePerfFromApi(){
       var db=loadPerfDB();
       var changed=false;
       remote.forEach(function(rn){
+        var _matchSw=getSwimmers().find(function(sw){return (sw.firstName+' '+sw.lastName).toLowerCase()===rn.nageur_nom.toLowerCase();});
         var local=(db.nageurs||[]).find(function(n){return n.nom.toLowerCase()===rn.nageur_nom.toLowerCase();});
         if(!local){
-          db.nageurs.push({id:uid(),nom:rn.nageur_nom,performances:(rn.performances||[]).map(function(p){return Object.assign({},p,{id:uid(),_synced:true});})});
+          db.nageurs.push({id:_matchSw?_matchSw.id:uid(),nom:rn.nageur_nom,performances:(rn.performances||[]).map(function(p){return Object.assign({},p,{id:uid(),_synced:true});})});
           changed=true;
         } else {
+          if(_matchSw&&local.id!==_matchSw.id){local.id=_matchSw.id;changed=true;}
           (rn.performances||[]).forEach(function(rp){
             var exists=(local.performances||[]).find(function(lp){
               return lp.date===rp.date&&lp.nage===rp.nage&&lp.distance===rp.distance&&lp.temps===rp.temps;
@@ -6796,17 +6798,14 @@ async function _mergeNageursFromApi(){
     if(!r.ok)return;
     var data=await r.json();
     if(!data||!data.length)return;
-    var existing=getSwimmers();
-    var existingIds=existing.map(function(s){return s.id;});
+    var localOnly=getSwimmers().filter(function(s){return !s.id.includes('-');});
     var changed=false;
     data.forEach(function(n){
-      if(existingIds.indexOf(n.id)===-1){
-        existing.push({id:n.id,firstName:n.prenom,lastName:n.nom,email:n.email||'',photo:null,createdAt:n.created_at||new Date().toISOString()});
-        changed=true;
-      }
+      localOnly.push({id:n.id,firstName:n.prenom,lastName:n.nom,email:n.email||'',photo:null,createdAt:n.created_at||new Date().toISOString()});
+      changed=true;
     });
     if(changed){
-      localStorage.setItem(swimmersKey(),JSON.stringify(existing));
+      localStorage.setItem(swimmersKey(),JSON.stringify(localOnly));
       if(typeof renderSwimmerManage==='function')renderSwimmerManage();
       if(typeof renderSwimmerGrid==='function')renderSwimmerGrid();
       if(typeof renderGFBar==='function')renderGFBar();
@@ -7733,6 +7732,10 @@ function deleteSwimmer(swimmerId){
   var arr=getSwimmers().filter(function(s){return s.id!==swimmerId;});
   localStorage.setItem(swimmersKey(),JSON.stringify(arr));
   Object.keys(localStorage).forEach(function(k){if(k.indexOf(swimmerId)!==-1)localStorage.removeItem(k);});
+  if(swimmerId.includes('-')){
+    fetch('/api/nageurs?id='+encodeURIComponent(swimmerId),{method:'DELETE'})
+      .catch(function(e){console.warn('[deleteSwimmer]',e.message);});
+  }
 }
 function swimmerInitials(sw){return((sw.firstName||'').charAt(0)+(sw.lastName||'').charAt(0)).toUpperCase()||'?';}
 function swimmerAvatarHTML(sw,size){

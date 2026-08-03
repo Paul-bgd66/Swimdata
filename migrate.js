@@ -99,7 +99,7 @@ async function main() {
   console.log('\n👤  Upsert coach\n');
 
   const coach = {
-    id: 'mozteq1ey1otbsnaq1',
+    id: 'dcefb821-a849-42fd-b08b-9fe4919096d7',
     club_id: 'moz9da6ny54zkojwig',
     name: 'Paul',
     role: 'manager',
