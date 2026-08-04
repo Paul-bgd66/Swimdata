@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
+    "chart.js": "^4.5.1",
     "jszip": "^3.10.1",
     "next": "^15.3.4",
     "react": "^19.1.0",
