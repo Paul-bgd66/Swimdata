@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import Performances from './components/Performances'
+import Sante from './components/Sante'
 import styles from './swimmer.module.css'
-import type { Perf, SwimmerMeta } from './lib/types'
+import type { HrvEntry, PoidsEntry, Perf, SwimmerMeta } from './lib/types'
 
 const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
@@ -90,6 +91,8 @@ export default function SwimmerClient() {
   const [swimmerNom, setSwimmerNom] = useState('')
   const [meta, setMeta] = useState<SwimmerMeta>({})
   const [perfs, setPerfs] = useState<Perf[]>([])
+  const [hrv,   setHrv]   = useState<HrvEntry[]>([])
+  const [poids, setPoids] = useState<PoidsEntry[]>([])
   const [theme, setTheme] = useState('light')
   const [colors, setColors] = useState({ c1: '#2176e8', c2: '#f5c400' })
   const [toast, setToast] = useState('')
@@ -154,11 +157,13 @@ export default function SwimmerClient() {
       'clubId='  + encodeURIComponent(m.clubId) +
       '&coachId=' + encodeURIComponent(m.coachId)
 
-    const [perfsRes] = await Promise.allSettled([
+    const [perfsRes, hrvRes, poidsRes] = await Promise.allSettled([
       fetch('/api/performances?' + q).then(r => r.ok ? r.json() : []),
+      fetch('/api/hrv?'          + q).then(r => r.ok ? r.json() : []),
+      fetch('/api/poids?'        + q).then(r => r.ok ? r.json() : []),
     ])
 
-    // ── .concat() guard — no overwrite ──────────────────────────────────────
+    // ── performances — .concat() guard ──────────────────────────────────────
     let next: Perf[] = []
     if (perfsRes.status === 'fulfilled' && Array.isArray(perfsRes.value)) {
       perfsRes.value.forEach((g: { nageur_nom: string; performances: Perf[] }) => {
@@ -166,6 +171,27 @@ export default function SwimmerClient() {
       })
     }
     setPerfs(next)
+
+    // ── HRV — même garde .concat() ──────────────────────────────────────────
+    let nextHrv: HrvEntry[] = []
+    if (hrvRes.status === 'fulfilled' && Array.isArray(hrvRes.value)) {
+      hrvRes.value.forEach((g: { nageur_nom: string; historique: HrvEntry[] }) => {
+        if (sameName(g.nageur_nom, nom)) nextHrv = nextHrv.concat(g.historique ?? [])
+      })
+    }
+    nextHrv.sort((a, b) => a.date < b.date ? -1 : 1)
+    setHrv(nextHrv)
+
+    // ── Poids — match prénom + nom ───────────────────────────────────────────
+    let nextPoids: PoidsEntry[] = []
+    if (poidsRes.status === 'fulfilled' && Array.isArray(poidsRes.value)) {
+      poidsRes.value.forEach((g: { prenom: string; nom: string; entries: PoidsEntry[] }) => {
+        if (sameName(g.prenom, m.firstName ?? '') && sameName(g.nom, m.lastName ?? ''))
+          nextPoids = g.entries ?? []
+      })
+    }
+    nextPoids.sort((a, b) => a.date < b.date ? -1 : 1)
+    setPoids(nextPoids)
   }
 
   function showToast(msg: string) {
@@ -239,7 +265,23 @@ export default function SwimmerClient() {
             </>
           )}
 
-          {activeTab !== 'perf' && (
+          {activeTab === 'sante' && (
+            <>
+              <div className={styles.pageTitle}>Santé</div>
+              <Sante
+                hrv={hrv}
+                poids={poids}
+                swimmerNom={swimmerNom}
+                meta={meta}
+                onHrvChange={setHrv}
+                onPoidsChange={setPoids}
+                showToast={showToast}
+                colors={colors}
+              />
+            </>
+          )}
+
+          {activeTab !== 'perf' && activeTab !== 'sante' && (
             <div className={styles.placeholder}>Bientôt disponible</div>
           )}
 

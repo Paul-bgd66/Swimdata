@@ -7,6 +7,19 @@ export interface Perf {
   note?: string
 }
 
+export interface HrvEntry {
+  date: string
+  rmssd: number | null
+  note?: number | null
+  source?: string
+  commentaire?: string
+}
+
+export interface PoidsEntry {
+  date: string
+  weight: number
+}
+
 export interface SwimmerMeta {
   role?: string
   clubId?: string
