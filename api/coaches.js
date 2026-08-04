@@ -28,7 +28,21 @@ export default async function handler(req) {
 
   if (req.method === 'GET') {
     const clubId = url.searchParams.get('clubId');
-    if (!clubId) return json(400, { error: 'clubId required' });
+    const userId = url.searchParams.get('userId');
+    const email  = url.searchParams.get('email');
+
+    // Résolution club_id depuis l'UUID auth ou l'email du coach (service key → contourne RLS)
+    if (userId || email) {
+      const sb = supabase();
+      let q = sb.from('coaches').select('club_id');
+      q = userId ? q.eq('id', userId) : q.eq('email', email);
+      const { data, error } = await q.maybeSingle();
+      if (error) return json(500, { error: error.message });
+      if (!data || !data.club_id) return json(404, { error: 'Coach not found' });
+      return json(200, { club_id: data.club_id });
+    }
+
+    if (!clubId) return json(400, { error: 'clubId, userId or email required' });
 
     const { data, error } = await supabase()
       .from('coaches')

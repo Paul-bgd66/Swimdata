@@ -8015,20 +8015,20 @@ initDefaultClubs();
     };
     _clubs.push(_club);saveClubs(_clubs);
   }
-  // Récupérer le vrai club_id depuis la table coaches
-  // Essai 1 : par Supabase auth UUID (nouveaux comptes)
-  // Essai 2 : par email (comptes migrés avec ancien ID local)
+  // Récupérer le vrai club_id via l'API serveur (service key → contourne RLS)
+  // Essai 1 : par Supabase auth UUID ; Essai 2 : par email (migration)
   try{
-    var _coachData=null;
-    var _r1=await _supabase.from('coaches').select('club_id').eq('id',_user.id).maybeSingle();
-    if(_r1&&_r1.data&&_r1.data.club_id)_coachData=_r1.data;
-    if(!_coachData&&_user.email){
-      var _r2=await _supabase.from('coaches').select('club_id').eq('email',_user.email).maybeSingle();
-      if(_r2&&_r2.data&&_r2.data.club_id)_coachData=_r2.data;
+    var _apiUrl='/api/coaches?userId='+encodeURIComponent(_user.id);
+    var _apiR=await fetch(_apiUrl);
+    if(_apiR.status===404&&_user.email){
+      _apiR=await fetch('/api/coaches?email='+encodeURIComponent(_user.email));
     }
-    if(_coachData&&_coachData.club_id){
-      _club.id=_coachData.club_id;
-      saveClubs(_clubs);
+    if(_apiR.ok){
+      var _apiD=await _apiR.json();
+      if(_apiD&&_apiD.club_id){
+        _club.id=_apiD.club_id;
+        saveClubs(_clubs);
+      }
     }
   }catch(e){console.warn('[auth] coaches club_id lookup:',e.message);}
   currentClub=_club;
