@@ -1,0 +1,15 @@
+:root {
+  --navy: #0b2550;
+  --blue2: #2176e8;
+  --yellow: #f5c400;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwimData — Connexion</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --navy:#0b2550;
+    --blue2:#2176e8;
+    --yellow:#f5c400;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#0a0a0a;
+    color:#fff;
+    font-family:'DM Sans',sans-serif;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    min-height:100vh;
+  }
+  .card{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    padding:36px 28px 28px;
+    width:100%;max-width:380px;
+  }
+  .logo{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:2.4rem;letter-spacing:4px;
+    color:#fff;
+    text-align:center;margin-bottom:6px;
+  }
+  .tagline{
+    font-size:.6rem;letter-spacing:3px;text-transform:uppercase;
+    color:rgba(255,255,255,.35);text-align:center;margin-bottom:32px;
+  }
+  .state{display:none}
+  .state.active{display:block}
+
+  .field-label{
+    font-size:.72rem;font-weight:600;
+    color:rgba(255,255,255,.5);
+    margin-bottom:6px;
+    text-transform:uppercase;letter-spacing:1px;
+  }
+  input{
+    width:100%;
+    background:rgba(255,255,255,.06);
+    border:1.5px solid rgba(255,255,255,.12);
+    border-radius:8px;
+    padding:12px 14px;
+    color:#fff;
+    font-family:'DM Sans',sans-serif;
+    font-size:.92rem;
+    outline:none;
+    transition:border-color .2s;
+    margin-bottom:14px;
+  }
+  input:focus{border-color:rgba(255,255,255,.4);}
+  input::placeholder{color:rgba(255,255,255,.25);}
+
+  .btn{
+    width:100%;
+    border:none;border-radius:10px;
+    padding:14px;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.05rem;letter-spacing:2px;
+    cursor:pointer;
+    transition:opacity .2s, background .2s;
+    margin-top:4px;
+  }
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-primary{background:var(--blue2);color:#fff;}
+  .btn-primary:hover:not(:disabled){opacity:.88;}
+  .btn-outline{
+    background:transparent;color:#fff;
+    border:1.5px solid rgba(255,255,255,.25);
+    margin-top:10px;
+  }
+  .btn-outline:hover:not(:disabled){background:rgba(255,255,255,.06);}
+
+  .msg{
+    font-size:.78rem;
+    min-height:18px;
+    text-align:center;
+    margin:10px 0 4px;
+  }
+  .msg.err{color:#f87171}
+  .msg.ok{color:#22c55e}
+  .msg.mute{color:rgba(255,255,255,.55)}
+
+  .link-btn{
+    display:block;width:100%;
+    background:none;border:none;
+    color:rgba(255,255,255,.4);
+    font-family:'DM Sans',sans-serif;
+    font-size:.78rem;cursor:pointer;
+    text-decoration:underline;
+    padding:8px 0;
+    text-align:center;
+    margin:0;
+  }
+  .link-btn:hover{color:rgba(255,255,255,.7);}
+  .back-link{margin-top:14px;}
+
+  #forgot-section{display:none;margin-top:14px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">SWIMDATA</div>
+  <div class="tagline">La plateforme des coachs de natation</div>
+
+  <!-- ÉTAT 1 : ACCUEIL -->
+  <div class="state active" id="state-home">
+    <button class="btn btn-primary" onclick="showState('login')">SE CONNECTER</button>
+    <button class="btn btn-outline" onclick="showState('signup')">S'INSCRIRE</button>
+  </div>
+
+  <!-- ÉTAT 2 : SE CONNECTER -->
+  <div class="state" id="state-login">
+    <div class="field-label">Email</div>
+    <input type="email" id="login-email" placeholder="coach@monclub.fr" autocomplete="email"
+      onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+    <div class="field-label">Mot de passe</div>
+    <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')submitLogin()">
+    <div class="msg err" id="login-msg"></div>
+    <button class="btn btn-primary" id="login-btn" onclick="submitLogin()">SE CONNECTER</button>
+    <button class="link-btn" onclick="toggleForgot()">Mot de passe oublié ?</button>
+    <div id="forgot-section">
+      <input type="email" id="forgot-email" placeholder="Votre email">
+      <button class="btn btn-outline" onclick="submitForgot()" style="margin-top:0">ENVOYER LE LIEN</button>
+      <div class="msg mute" id="forgot-msg"></div>
+    </div>
+    <button class="link-btn back-link" onclick="showState('home')">← Retour</button>
+  </div>
+
+  <!-- ÉTAT 4 : DÉFINIR MOT DE PASSE (invitation nageur) -->
+  <div class="state" id="state-set-password">
+    <p style="color:rgba(255,255,255,.6);font-size:.82rem;margin-bottom:18px;text-align:center;">
+      Bienvenue ! Choisissez un mot de passe pour activer votre compte.
+    </p>
+    <div id="invite-email-info" style="display:none;font-size:.78rem;color:rgba(255,255,255,.45);text-align:center;margin-bottom:16px"></div>
+    <div class="field-label">Mot de passe</div>
+    <input type="password" id="invite-password" placeholder="Minimum 6 caractères" autocomplete="new-password">
+    <div class="field-label">Confirmer</div>
+    <input type="password" id="invite-password2" placeholder="Répétez le mot de passe" autocomplete="new-password"
+      onkeydown="if(event.key==='Enter')submitSetPassword()">
+    <div class="msg" id="invite-msg"></div>
+    <button class="btn btn-primary" id="invite-btn" onclick="submitSetPassword()">ACTIVER MON COMPTE</button>
+  </div>
+
+  <!-- ÉTAT 5 : SUCCÈS ACTIVATION -->
+  <div class="state" id="state-success">
+    <p style="text-align:center;font-size:1.5rem;margin-bottom:12px">✅</p>
+    <p id="success-welcome" style="color:rgba(255,255,255,.9);font-size:1rem;font-weight:600;text-align:center;margin-bottom:8px"></p>
+    <p style="color:rgba(255,255,255,.5);font-size:.82rem;text-align:center;">Redirection en cours…</p>
+  </div>
+
+  <!-- ÉTAT 3 : S'INSCRIRE -->
+  <div class="state" id="state-signup">
+    <div class="field-label">Prénom</div>
+    <input type="text" id="signup-firstname" placeholder="Prénom" autocomplete="given-name">
+    <div class="field-label">Nom</div>
+    <input type="text" id="signup-lastname" placeholder="Nom" autocomplete="family-name">
+    <div class="field-label">Nom du club</div>
+    <input type="text" id="signup-club" placeholder="ex: Canet 66 Natation">
+    <div class="field-label">Email</div>
+    <input type="email" id="signup-email" placeholder="coach@monclub.fr" autocomplete="email">
+    <div class="field-label">Mot de passe</div>
+    <input type="password" id="signup-password" placeholder="Minimum 6 caractères" autocomplete="new-password">
+    <div class="msg" id="signup-msg"></div>
+    <button class="btn btn-primary" id="signup-btn" onclick="submitSignup()">CRÉER MON COMPTE</button>
+    <button class="link-btn back-link" onclick="showState('home')">← Retour</button>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE CONFIG ──
+var _SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co';
+var _SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv';
+var _sb = supabase.createClient(_SB_URL, _SB_ANON);
+
+var _pkceUser = null;
+
+function showState(name){
+  ['home','login','signup','set-password','success'].forEach(function(s){
+    var el=document.getElementById('state-'+s);
+    if(el)el.classList.toggle('active', s===name);
+  });
+  // Reset messages
+  var lm=document.getElementById('login-msg');if(lm)lm.textContent='';
+  var sm=document.getElementById('signup-msg');if(sm){sm.textContent='';sm.className='msg';}
+  var fm=document.getElementById('forgot-msg');if(fm){fm.textContent='';fm.className='msg mute';}
+  var fs=document.getElementById('forgot-section');if(fs)fs.style.display='none';
+}
+
+async function submitLogin(){
+  var email = document.getElementById('login-email').value.trim();
+  var password = document.getElementById('login-password').value;
+  var msg = document.getElementById('login-msg');
+  var btn = document.getElementById('login-btn');
+  msg.textContent = '';
+  if(!email||!password){msg.textContent='Email et mot de passe requis.';return;}
+  btn.disabled = true;
+  btn.textContent = 'CONNEXION…';
+  var res = await _sb.auth.signInWithPassword({email:email, password:password});
+  if(res.error){
+    msg.textContent = res.error.message;
+    btn.disabled = false;
+    btn.textContent = 'SE CONNECTER';
+    return;
+  }
+  var role = res.data && res.data.user && res.data.user.user_metadata && res.data.user.user_metadata.role;
+  window.location.href = (role === 'swimmer') ? '/swimmer.html' : '/index.html';
+}
+
+async function submitSignup(){
+  var firstName = document.getElementById('signup-firstname').value.trim();
+  var lastName  = document.getElementById('signup-lastname').value.trim();
+  var clubName  = document.getElementById('signup-club').value.trim();
+  var email     = document.getElementById('signup-email').value.trim();
+  var password  = document.getElementById('signup-password').value;
+  var msg = document.getElementById('signup-msg');
+  var btn = document.getElementById('signup-btn');
+  msg.className='msg err';msg.textContent='';
+  if(!email||!password){msg.textContent='Email et mot de passe requis.';return;}
+  if(password.length<6){msg.textContent='Mot de passe : 6 caractères minimum.';return;}
+  btn.disabled = true;
+  btn.textContent = 'CRÉATION…';
+  var res = await _sb.auth.signUp({
+    email:email, password:password,
+    options:{data:{role:'coach', firstName:firstName, lastName:lastName, clubName:clubName}}
+  });
+  btn.disabled = false;
+  btn.textContent = 'CRÉER MON COMPTE';
+  if(res.error){
+    msg.className='msg err';
+    msg.textContent = res.error.message;
+    return;
+  }
+  msg.className='msg ok';
+  msg.textContent = '✅ Email de confirmation envoyé à ' + email;
+}
+
+function toggleForgot(){
+  var s = document.getElementById('forgot-section');
+  if(!s)return;
+  s.style.display = s.style.display === 'block' ? 'none' : 'block';
+}
+
+async function submitSetPassword(){
+  var p1  = document.getElementById('invite-password').value;
+  var p2  = document.getElementById('invite-password2').value;
+  var msg = document.getElementById('invite-msg');
+  var btn = document.getElementById('invite-btn');
+  msg.className = 'msg err'; msg.textContent = '';
+  if (!p1) { msg.textContent = 'Mot de passe requis.'; return; }
+  if (p1.length < 6) { msg.textContent = 'Minimum 6 caractères.'; return; }
+  if (p1 !== p2) { msg.textContent = 'Les mots de passe ne correspondent pas.'; return; }
+  btn.disabled = true; btn.textContent = 'ACTIVATION…';
+  var res = await _sb.auth.updateUser({ password: p1, data: { passwordSet: true } });
+  btn.disabled = false; btn.textContent = 'ACTIVER MON COMPTE';
+  if (res.error) { msg.textContent = res.error.message; return; }
+  showWelcomeAndRedirect();
+}
+
+async function submitForgot(){
+  var email = document.getElementById('forgot-email').value.trim();
+  var msg = document.getElementById('forgot-msg');
+  msg.className='msg mute';
+  if(!email){msg.textContent='Entrez votre email.';return;}
+  msg.textContent = 'Envoi en cours…';
+  var res = await _sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/login.html'
+  });
+  if(res.error){msg.className='msg err';msg.textContent = res.error.message; return;}
+  msg.className='msg ok';
+  msg.textContent = '✅ Lien envoyé — vérifiez votre boite mail.';
+}
+
+
+function showWelcomeAndRedirect(){
+  var firstName = (_pkceUser && _pkceUser.user_metadata && _pkceUser.user_metadata.firstName) || '';
+  var el = document.getElementById('success-welcome');
+  if(el) el.textContent = 'Bienvenue' + (firstName ? ' ' + firstName : '') + ' ! Ton compte est prêt.';
+  showState('success');
+  setTimeout(function(){ window.location.href = '/swimmer.html'; }, 2000);
+}
+window.showWelcomeAndRedirect = showWelcomeAndRedirect;
+
+// ── DÉTECTION TOKEN D'INVITATION SUPABASE ──
+(function detectInvite(){
+  // Flux PKCE : ?code=...
+  var searchParams = new URLSearchParams(window.location.search);
+  var code = searchParams.get('code');
+  if (code) {
+    history.replaceState(null, '', window.location.pathname);
+    _sb.auth.exchangeCodeForSession(code).then(function(res){
+      if (res.error) {
+        showState('login');
+        var msg = document.getElementById('login-msg');
+        if (msg) msg.textContent = 'Lien invalide ou expiré. Demandez une nouvelle invitation.';
+        return;
+      }
+      _pkceUser = (res.data && res.data.user) || null;
+      var emailInfo = document.getElementById('invite-email-info');
+      if (emailInfo && _pkceUser && _pkceUser.email) {
+        emailInfo.textContent = _pkceUser.email;
+        emailInfo.style.display = 'block';
+      }
+      showState('set-password');
+    });
+    return;
+  }
+
+  // Flux implicite : #access_token=...
+  var hash = window.location.hash.substring(1);
+  if (!hash) return;
+  var params = {};
+  hash.split('&').forEach(function(p){
+    var kv = p.split('=');
+    params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+  });
+  if (params.type !== 'invite' || !params.access_token) return;
+  // Nettoyer le hash de l'URL sans recharger la page
+  history.replaceState(null, '', window.location.pathname);
+  // Établir la session Supabase avec le token d'invitation
+  _sb.auth.setSession({
+    access_token: params.access_token,
+    refresh_token: params.refresh_token || ''
+  }).then(function(res){
+    if (res.error) {
+      showState('login');
+      var msg = document.getElementById('login-msg');
+      if (msg) msg.textContent = 'Lien invalide ou expiré. Demandez une nouvelle invitation.';
+      return;
+    }
+    showState('set-password');
+  });
+})();
+</script>
+</body>
+</html>
