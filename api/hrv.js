@@ -15,7 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -137,6 +137,23 @@ export default async function handler(req) {
       return json(null, 500, { error: error.message });
     }
     return json(null, 200, { ok: true, count: rows.length });
+  }
+
+  // ── DELETE ?clubId=&coachId=&nageurNom=&date= ──────────────────
+  if (req.method === 'DELETE') {
+    const url = new URL(req.url);
+    const clubId    = url.searchParams.get('clubId');
+    const coachId   = url.searchParams.get('coachId');
+    const nageurNom = url.searchParams.get('nageurNom');
+    const date      = url.searchParams.get('date');
+    if (!clubId || !coachId || !nageurNom || !date)
+      return json(null, 400, { error: 'clubId, coachId, nageurNom, date required' });
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const { error } = await supabase.from('hrv').delete()
+      .eq('club_id', clubId).eq('coach_id', coachId)
+      .eq('nageur_nom', nageurNom).eq('date', date);
+    if (error) return json(null, 500, { error: error.message });
+    return json(null, 200, { ok: true });
   }
 
   if (req.method !== 'POST') {

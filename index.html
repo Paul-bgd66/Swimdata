@@ -4162,9 +4162,6 @@ function renderVidSwimmerList(){
         +'<div class="vid-swimmer-name">'+sw.firstName+' '+sw.lastName+'</div>'
         +'<div class="vid-swimmer-count">'+vSw.videos.length+' '+(vSw.videos.length!==1?t('video.count.p'):t('video.count.s'))+'</div>'
       +'</div>'
-      +(window._visitorMode?'':'<button class="vid-ann-del" style="font-size:.8rem" onclick="event.stopPropagation();delVideoSwimmer(\''+sw.id+'\')">'
-        +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>'
-        +'</button>')
       +'</div>';
   }).join('');
 }
@@ -6950,10 +6947,6 @@ function renderHRVListe(){
         ${derniere?.note!=null?
         `<div class="hrv-tag" style="background:${color}22;color:${color};flex-shrink:0">${derniere.note.toFixed(1)}</div>`:
         ''}
-        ${_v?'':
-        `<button onclick="event.stopPropagation();hrvDelNageurConfirm('${n.nom}')"
-          style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 7px;border-radius:5px;font-size:.8rem;transition:color .15s"
-          onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--muted)'">✕</button>`}
       </div>`;
     }).join('')}
   </div>`;
@@ -7049,6 +7042,10 @@ function renderHRVProfil(){
             ${h.commentaire?`<div style="font-size:.7rem;color:var(--muted);margin-top:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${h.commentaire}</div>`:''}
           </div>
           <span style="color:var(--muted);font-size:.75rem;flex-shrink:0;margin-left:8px">${isOpen?'▲':'▼'}</span>
+          ${_v?'':
+          `<button onclick="event.stopPropagation();deleteHRVEntry('${nageur.nom.replace(/'/g,"\\'")}','${h.date}')"
+            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:4px 6px;border-radius:5px;flex-shrink:0;transition:color .15s"
+            onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--muted)'">×</button>`}
         </div>
         <div class="hrv-detail-panel${isOpen?' open':''}" id="hrv-detail-${key}"
           style="border-color:${color}44;background:var(--bg)">
@@ -7138,6 +7135,23 @@ function hrvDelNageurConfirm(nom){
     showToast(t('hrv.profile.deleted'));
   };
   if(modal)modal.classList.add('open');
+}
+
+function deleteHRVEntry(nageurNom,date){
+  showConfirmModal(
+    'Supprimer cette mesure ?',
+    nageurNom+' — '+date,
+    function(){
+      var db=loadHRVDB();
+      var n=db.nageurs.find(function(x){return x.nom===nageurNom;});
+      if(n){n.historique=(n.historique||[]).filter(function(h){return h.date!==date;});}
+      saveHRVDB(db);
+      if(_hrvNageurActif===nageurNom)renderHRVProfil();else renderHRV();
+      fetch('/api/hrv?clubId='+encodeURIComponent(currentClub.id)+'&coachId='+encodeURIComponent(currentCoachId)+'&nageurNom='+encodeURIComponent(nageurNom)+'&date='+encodeURIComponent(date),{method:'DELETE'})
+        .then(function(r){if(!r.ok)console.warn('[deleteHRVEntry] server',r.status);})
+        .catch(function(e){console.warn('[deleteHRVEntry]',e.message);});
+    }
+  );
 }
 
 function promptLang(){

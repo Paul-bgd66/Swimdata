@@ -701,6 +701,7 @@ function sessionDate(s){
     await loadAllData();
     renderDashboard();
     renderCalendar();
+    renderPerfs();
   }catch(e){
     console.error('[init]',e);
     document.getElementById('loading').textContent='ERREUR — '+e.message;
