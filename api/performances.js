@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -89,6 +89,28 @@ export default async function handler(req) {
       return json(null, 500, { error: error.message });
     }
     return json(null, 200, { ok: true, count: rows.length });
+  }
+
+  // ── DELETE ?clubId=&coachId=&nageurNom=&bassin=&nage=&distance=&temps=&date= ──
+  if (req.method === 'DELETE') {
+    const clubId    = url.searchParams.get('clubId');
+    const coachId   = url.searchParams.get('coachId');
+    const nageurNom = url.searchParams.get('nageurNom');
+    const bassin    = url.searchParams.get('bassin');
+    const nage      = url.searchParams.get('nage');
+    const distance  = url.searchParams.get('distance');
+    const temps     = url.searchParams.get('temps');
+    const date      = url.searchParams.get('date');
+    if (!clubId||!coachId||!nageurNom||!bassin||!nage||!distance||!temps||!date)
+      return json(null, 400, { error: 'All fields required' });
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const { error } = await supabase.from('performances').delete()
+      .eq('club_id', clubId).eq('coach_id', coachId)
+      .eq('nageur_nom', nageurNom)
+      .eq('bassin', parseInt(bassin, 10)).eq('nage', nage)
+      .eq('distance', parseInt(distance, 10)).eq('temps', temps).eq('date', date);
+    if (error) return json(null, 500, { error: error.message });
+    return json(null, 200, { ok: true });
   }
 
   return json(null, 405, { error: 'Method not allowed' });

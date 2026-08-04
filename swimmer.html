@@ -976,9 +976,13 @@ function openPerfHistoriqueNageur(nage,distance){
     html+='<div style="text-align:center;padding:20px;color:var(--muted)">Aucune performance enregistrée.</div>';
   }else{
     mine.forEach(function(p){
-      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">'
-        +'<div style="font-size:.85rem;color:var(--muted)">'+esc(fmtDate(p.date))+'</div>'
+      var safeTemps=p.temps.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">'
+        +'<div style="font-size:.85rem;color:var(--muted);flex:1">'+esc(fmtDate(p.date))+'</div>'
         +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.15rem;color:var(--c1);font-variant-numeric:tabular-nums">'+esc(p.temps)+'</div>'
+        +'<button onclick="deletePerf('+Number(p.bassin)+',\''+nage+'\','+Number(p.distance)+',\''+safeTemps+'\',\''+p.date+'\')" '
+          +'style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;padding:4px 6px;line-height:1;min-width:32px;min-height:32px;border-radius:6px" '
+          +'title="Supprimer">×</button>'
         +'</div>';
     });
   }
@@ -986,6 +990,48 @@ function openPerfHistoriqueNageur(nage,distance){
   showModal((NAGE_LABELS[nage]||nage)+' '+distance+'m',html);
 }
 window.openPerfHistoriqueNageur=openPerfHistoriqueNageur;
+
+function _showConfirmModal(title,message,onConfirm){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML='<div style="background:var(--card);border-radius:16px;padding:24px;max-width:320px;width:100%">'
+    +'<div style="font-weight:700;font-size:.95rem;margin-bottom:8px;color:var(--text)">'+title+'</div>'
+    +'<div style="font-size:.85rem;color:var(--muted);margin-bottom:20px;line-height:1.5">'+message+'</div>'
+    +'<div style="display:flex;gap:10px">'
+      +'<button id="scm-cancel" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:none;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer">Annuler</button>'
+      +'<button id="scm-ok" style="flex:1;padding:10px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:.85rem;font-weight:600;cursor:pointer">Supprimer</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#scm-cancel').onclick=function(){document.body.removeChild(ov);};
+  ov.querySelector('#scm-ok').onclick=function(){document.body.removeChild(ov);onConfirm();};
+  ov.onclick=function(e){if(e.target===ov)document.body.removeChild(ov);};
+}
+
+function deletePerf(bassin,nage,distance,temps,date){
+  _showConfirmModal(
+    'Supprimer cette performance ?',
+    esc(temps)+' — '+esc(fmtDate(date)),
+    function(){
+      _perfs=_perfs.filter(function(p){
+        return !(Number(p.bassin)===Number(bassin)&&p.nage===nage&&Number(p.distance)===Number(distance)&&p.temps===temps&&p.date===date);
+      });
+      openPerfHistoriqueNageur(nage,Number(distance));
+      renderPerfs();
+      var q='clubId='+encodeURIComponent(_meta.clubId)
+        +'&coachId='+encodeURIComponent(_meta.coachId)
+        +'&nageurNom='+encodeURIComponent(_swimmerNom)
+        +'&bassin='+encodeURIComponent(bassin)
+        +'&nage='+encodeURIComponent(nage)
+        +'&distance='+encodeURIComponent(distance)
+        +'&temps='+encodeURIComponent(temps)
+        +'&date='+encodeURIComponent(date);
+      fetch('/api/performances?'+q,{method:'DELETE'})
+        .then(function(r){if(!r.ok)console.warn('[deletePerf] server',r.status);})
+        .catch(function(e){console.warn('[deletePerf]',e.message);});
+    }
+  );
+}
+window.deletePerf=deletePerf;
 
 async function submitAddPerf(){
   var msg=document.getElementById('ap-msg');
