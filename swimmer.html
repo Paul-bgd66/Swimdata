@@ -738,7 +738,7 @@ async function loadAllData(){
   _perfs=[];
   if(results[1].status==='fulfilled'&&Array.isArray(results[1].value)){
     results[1].value.forEach(function(g){
-      if(sameName(g.nageur_nom,_swimmerNom))_perfs=g.performances||[];
+      if(sameName(g.nageur_nom,_swimmerNom))_perfs=_perfs.concat(g.performances||[]);
     });
   }
 
@@ -746,7 +746,7 @@ async function loadAllData(){
   _hrv=[];
   if(results[2].status==='fulfilled'&&Array.isArray(results[2].value)){
     results[2].value.forEach(function(g){
-      if(sameName(g.nageur_nom,_swimmerNom))_hrv=g.historique||[];
+      if(sameName(g.nageur_nom,_swimmerNom))_hrv=_hrv.concat(g.historique||[]);
     });
   }
   _hrv.sort(function(a,b){return a.date<b.date?-1:1;});

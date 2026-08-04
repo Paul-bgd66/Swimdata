@@ -43,8 +43,9 @@ export default async function handler(req) {
 
     const map = {};
     (data || []).forEach((row) => {
-      if (!map[row.nageur_nom]) map[row.nageur_nom] = { nageur_nom: row.nageur_nom, performances: [] };
-      map[row.nageur_nom].performances.push({
+      const key = row.nageur_nom.trim().toLowerCase();
+      if (!map[key]) map[key] = { nageur_nom: row.nageur_nom, performances: [] };
+      map[key].performances.push({
         bassin: row.bassin,
         nage: row.nage,
         distance: row.distance,
