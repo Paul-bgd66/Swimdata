@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import Performances from './components/Performances'
 import Sante from './components/Sante'
 import Video from './components/Video'
+import Profil from './components/Profil'
 import styles from './swimmer.module.css'
 import type { HrvEntry, PoidsEntry, Perf, SwimmerMeta, VideoEntry } from './lib/types'
 
@@ -91,13 +92,15 @@ export default function SwimmerClient() {
   const [activeTab, setActiveTab] = useState<Tab>('perf')
   const [swimmerNom, setSwimmerNom] = useState('')
   const [meta, setMeta] = useState<SwimmerMeta>({})
-  const [userId, setUserId] = useState('')
-  const [perfs,  setPerfs]  = useState<Perf[]>([])
-  const [hrv,    setHrv]    = useState<HrvEntry[]>([])
-  const [poids,  setPoids]  = useState<PoidsEntry[]>([])
-  const [videos, setVideos] = useState<VideoEntry[]>([])
-  const [theme, setTheme] = useState('light')
-  const [colors, setColors] = useState({ c1: '#2176e8', c2: '#f5c400' })
+  const [userId,     setUserId]     = useState('')
+  const [email,      setEmail]      = useState('')
+  const [perfs,      setPerfs]      = useState<Perf[]>([])
+  const [hrv,        setHrv]        = useState<HrvEntry[]>([])
+  const [poids,      setPoids]      = useState<PoidsEntry[]>([])
+  const [videos,     setVideos]     = useState<VideoEntry[]>([])
+  const [theme,      setTheme]      = useState('light')
+  const [colors,     setColors]     = useState({ c1: '#2176e8', c2: '#f5c400' })
+  const [clubColors, setClubColors] = useState({ c1: '#2176e8', c2: '#f5c400' })
   const [toast, setToast] = useState('')
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -113,6 +116,7 @@ export default function SwimmerClient() {
 
       const user = session.user
       setUserId(user.id)
+      setEmail(user.email ?? '')
       const m = (user.user_metadata ?? {}) as SwimmerMeta
       if (m.role !== 'swimmer') { router.push('/index.html'); return }
 
@@ -137,8 +141,11 @@ export default function SwimmerClient() {
           const r = await fetch('/api/clubs?id=' + encodeURIComponent(m.clubId))
           if (r.ok) {
             const club = await r.json()
-            c1 = m.swimmerColor1 || club.color1 || c1
-            c2 = m.swimmerColor2 || club.color2 || c2
+            const rawC1 = club.color1 || '#2176e8'
+            const rawC2 = club.color2 || '#f5c400'
+            setClubColors({ c1: rawC1, c2: rawC2 })
+            c1 = m.swimmerColor1 || rawC1
+            c2 = m.swimmerColor2 || rawC2
           }
         } catch { /* non-fatal */ }
       }
@@ -216,6 +223,15 @@ export default function SwimmerClient() {
       })
     }
     setVideos(nextVideos)
+  }
+
+  function handleMetaChange(patch: Partial<SwimmerMeta>) {
+    setMeta(prev => ({ ...prev, ...patch }))
+    if (patch.firstName !== undefined || patch.lastName !== undefined) {
+      const fn = patch.firstName ?? meta.firstName ?? ''
+      const ln = patch.lastName  ?? meta.lastName  ?? ''
+      setSwimmerNom((fn + ' ' + ln).trim())
+    }
   }
 
   function showToast(msg: string) {
@@ -318,7 +334,25 @@ export default function SwimmerClient() {
             </>
           )}
 
-          {activeTab !== 'perf' && activeTab !== 'sante' && activeTab !== 'video' && (
+          {activeTab === 'settings' && (
+            <>
+              <div className={styles.pageTitle}>Réglages</div>
+              <Profil
+                meta={meta}
+                email={email}
+                theme={theme}
+                colors={colors}
+                clubColors={clubColors}
+                onMetaChange={handleMetaChange}
+                onThemeChange={setTheme}
+                onColorsChange={setColors}
+                showToast={showToast}
+                onLogout={handleLogout}
+              />
+            </>
+          )}
+
+          {activeTab !== 'perf' && activeTab !== 'sante' && activeTab !== 'video' && activeTab !== 'settings' && (
             <div className={styles.placeholder}>Bientôt disponible</div>
           )}
 
