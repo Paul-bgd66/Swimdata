@@ -32,6 +32,30 @@ export interface PoidsEntry {
   weight: number
 }
 
+export interface SessionEntry {
+  id:              string
+  club_id?:        string
+  coach_id?:       string
+  name?:           string
+  titre?:          string
+  title?:          string
+  date?:           string
+  session_date?:   string
+  day?:            string
+  pool?:           string
+  notes?:          string
+  rows?:           unknown[]
+  distance?:       number
+  total_distance?: number
+  total?:          number
+  volume?:         number
+  km?:             number
+  saved_at?:       string
+  created_at?:     string
+  updated_at?:     string
+  [key: string]:   unknown
+}
+
 export interface SwimmerMeta {
   role?: string
   clubId?: string

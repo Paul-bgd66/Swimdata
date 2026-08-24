@@ -7,8 +7,9 @@ import Performances from './components/Performances'
 import Sante from './components/Sante'
 import Video from './components/Video'
 import Profil from './components/Profil'
+import Historique from './components/Historique'
 import styles from './swimmer.module.css'
-import type { HrvEntry, PoidsEntry, Perf, SwimmerMeta, VideoEntry } from './lib/types'
+import type { HrvEntry, PoidsEntry, Perf, SwimmerMeta, VideoEntry, SessionEntry } from './lib/types'
 
 const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
@@ -98,6 +99,7 @@ export default function SwimmerClient() {
   const [hrv,        setHrv]        = useState<HrvEntry[]>([])
   const [poids,      setPoids]      = useState<PoidsEntry[]>([])
   const [videos,     setVideos]     = useState<VideoEntry[]>([])
+  const [sessions,   setSessions]   = useState<SessionEntry[]>([])
   const [theme,      setTheme]      = useState('light')
   const [colors,     setColors]     = useState({ c1: '#2176e8', c2: '#f5c400' })
   const [clubColors, setClubColors] = useState({ c1: '#2176e8', c2: '#f5c400' })
@@ -170,11 +172,12 @@ export default function SwimmerClient() {
 
     const uid = await sb.auth.getSession().then(r => r.data.session?.user.id ?? '')
 
-    const [perfsRes, hrvRes, poidsRes, videosRes] = await Promise.allSettled([
+    const [perfsRes, hrvRes, poidsRes, videosRes, sessionsRes] = await Promise.allSettled([
       fetch('/api/performances?' + q).then(r => r.ok ? r.json() : []),
       fetch('/api/hrv?'          + q).then(r => r.ok ? r.json() : []),
       fetch('/api/poids?'        + q).then(r => r.ok ? r.json() : []),
       fetch('/api/videos?'       + q).then(r => r.ok ? r.json() : []),
+      fetch('/api/sessions?'     + q).then(r => r.ok ? r.json() : []),
     ])
 
     // ── performances — .concat() guard ──────────────────────────────────────
@@ -223,6 +226,11 @@ export default function SwimmerClient() {
       })
     }
     setVideos(nextVideos)
+
+    // ── Sessions — tableau plat, toutes séances du club ──────────────────
+    if (sessionsRes.status === 'fulfilled' && Array.isArray(sessionsRes.value)) {
+      setSessions(sessionsRes.value as SessionEntry[])
+    }
   }
 
   function handleMetaChange(patch: Partial<SwimmerMeta>) {
@@ -352,7 +360,15 @@ export default function SwimmerClient() {
             </>
           )}
 
-          {activeTab !== 'perf' && activeTab !== 'sante' && activeTab !== 'video' && activeTab !== 'settings' && (
+          {activeTab === 'training' && (
+            <>
+              <div className={styles.pageTitle}>Entraînements</div>
+              <Historique sessions={sessions} />
+            </>
+          )}
+
+          {activeTab !== 'perf' && activeTab !== 'sante' && activeTab !== 'video'
+            && activeTab !== 'settings' && activeTab !== 'training' && (
             <div className={styles.placeholder}>Bientôt disponible</div>
           )}
 

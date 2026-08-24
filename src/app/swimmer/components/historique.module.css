@@ -1,0 +1,229 @@
+/* ── Card ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+/* ── Calendar header ── */
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.calMonth {
+  font-family: 'Bebas Neue', var(--font-bebas), sans-serif;
+  font-size: 1.25rem;
+  letter-spacing: 1.5px;
+  color: var(--text);
+}
+
+.calNavBtn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Calendar grid ── */
+.calGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calDow {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  padding: 6px 0;
+  text-transform: uppercase;
+}
+
+.calDay {
+  aspect-ratio: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 0.8rem;
+  cursor: default;
+  min-width: 0;
+  color: var(--text);
+}
+
+.calDayEmpty {
+  aspect-ratio: 1;
+}
+
+.calDayToday {
+  border-color: var(--c1);
+  border-width: 2px;
+}
+
+.calDayHasSess {
+  cursor: pointer;
+}
+
+.calDayHasSess:hover {
+  background: color-mix(in srgb, var(--c1) 8%, transparent);
+}
+
+/* ── Dots ── */
+.dots {
+  display: flex;
+  gap: 3px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c1);
+  flex-shrink: 0;
+}
+
+/* ── Legend ── */
+.calLegend {
+  display: flex;
+  gap: 18px;
+  margin-top: 12px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  align-items: center;
+}
+
+.calLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c1);
+  flex-shrink: 0;
+}
+
+/* ── Empty state ── */
+.empty {
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding: 8px 0;
+}
+
+/* ── Modal ── */
+.modalBk {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+.modal {
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  padding: 22px 20px calc(24px + env(safe-area-inset-bottom));
+  width: 100%;
+  max-width: 520px;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0 }
+  to   { transform: translateY(0);    opacity: 1 }
+}
+
+@media (min-width: 600px) {
+  .modalBk { align-items: center; padding: 20px; }
+  .modal   { border-radius: 16px; padding-bottom: 24px; }
+}
+
+.modalTitle {
+  font-family: 'Bebas Neue', var(--font-bebas), sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 1.5px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+.modalX {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+/* ── Session detail ── */
+.separator {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.sessTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.sessDist {
+  font-size: 0.8rem;
+  color: var(--c1);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.sessField { margin-bottom: 8px; }
+
+.fLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 3px;
+}
+
+.sessFieldVal {
+  font-size: 0.83rem;
+  white-space: pre-wrap;
+  color: var(--text);
+}
