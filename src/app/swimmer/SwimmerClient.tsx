@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import Performances from './components/Performances'
 import Sante from './components/Sante'
+import Video from './components/Video'
 import styles from './swimmer.module.css'
-import type { HrvEntry, PoidsEntry, Perf, SwimmerMeta } from './lib/types'
+import type { HrvEntry, PoidsEntry, Perf, SwimmerMeta, VideoEntry } from './lib/types'
 
 const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
@@ -90,9 +91,11 @@ export default function SwimmerClient() {
   const [activeTab, setActiveTab] = useState<Tab>('perf')
   const [swimmerNom, setSwimmerNom] = useState('')
   const [meta, setMeta] = useState<SwimmerMeta>({})
-  const [perfs, setPerfs] = useState<Perf[]>([])
-  const [hrv,   setHrv]   = useState<HrvEntry[]>([])
-  const [poids, setPoids] = useState<PoidsEntry[]>([])
+  const [userId, setUserId] = useState('')
+  const [perfs,  setPerfs]  = useState<Perf[]>([])
+  const [hrv,    setHrv]    = useState<HrvEntry[]>([])
+  const [poids,  setPoids]  = useState<PoidsEntry[]>([])
+  const [videos, setVideos] = useState<VideoEntry[]>([])
   const [theme, setTheme] = useState('light')
   const [colors, setColors] = useState({ c1: '#2176e8', c2: '#f5c400' })
   const [toast, setToast] = useState('')
@@ -109,6 +112,7 @@ export default function SwimmerClient() {
       if (!session) { router.push('/login'); return }
 
       const user = session.user
+      setUserId(user.id)
       const m = (user.user_metadata ?? {}) as SwimmerMeta
       if (m.role !== 'swimmer') { router.push('/index.html'); return }
 
@@ -157,10 +161,13 @@ export default function SwimmerClient() {
       'clubId='  + encodeURIComponent(m.clubId) +
       '&coachId=' + encodeURIComponent(m.coachId)
 
-    const [perfsRes, hrvRes, poidsRes] = await Promise.allSettled([
+    const uid = await sb.auth.getSession().then(r => r.data.session?.user.id ?? '')
+
+    const [perfsRes, hrvRes, poidsRes, videosRes] = await Promise.allSettled([
       fetch('/api/performances?' + q).then(r => r.ok ? r.json() : []),
       fetch('/api/hrv?'          + q).then(r => r.ok ? r.json() : []),
       fetch('/api/poids?'        + q).then(r => r.ok ? r.json() : []),
+      fetch('/api/videos?'       + q).then(r => r.ok ? r.json() : []),
     ])
 
     // ── performances — .concat() guard ──────────────────────────────────────
@@ -192,6 +199,23 @@ export default function SwimmerClient() {
     }
     nextPoids.sort((a, b) => a.date < b.date ? -1 : 1)
     setPoids(nextPoids)
+
+    // ── Vidéos — aplatir quel que soit le groupement ────────────────────────
+    const nextVideos: VideoEntry[] = []
+    if (videosRes.status === 'fulfilled' && Array.isArray(videosRes.value)) {
+      videosRes.value.forEach((item: VideoEntry & { videos?: VideoEntry[]; swimmer_id?: string; prenom?: string; nom?: string; swimmer_prenom?: string; swimmer_nom?: string }) => {
+        const vids: VideoEntry[] = Array.isArray(item.videos) ? item.videos : [item]
+        vids.forEach(v => {
+          const sid  = v.swimmer_id  || item.swimmer_id  || ''
+          const pre  = v.swimmer_prenom || item.swimmer_prenom || item.prenom || ''
+          const vnom = v.swimmer_nom    || item.swimmer_nom    || item.nom    || ''
+          if (sid === uid || sameName((pre + ' ' + vnom).trim(), nom)) {
+            nextVideos.push(v)
+          }
+        })
+      })
+    }
+    setVideos(nextVideos)
   }
 
   function showToast(msg: string) {
@@ -281,7 +305,20 @@ export default function SwimmerClient() {
             </>
           )}
 
-          {activeTab !== 'perf' && activeTab !== 'sante' && (
+          {activeTab === 'video' && (
+            <>
+              <div className={styles.pageTitle}>Vidéo</div>
+              <Video
+                videos={videos}
+                userId={userId}
+                meta={meta}
+                onVideosChange={setVideos}
+                showToast={showToast}
+              />
+            </>
+          )}
+
+          {activeTab !== 'perf' && activeTab !== 'sante' && activeTab !== 'video' && (
             <div className={styles.placeholder}>Bientôt disponible</div>
           )}
 

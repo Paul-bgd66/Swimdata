@@ -7,6 +7,18 @@ export interface Perf {
   note?: string
 }
 
+export interface VideoEntry {
+  id: string
+  swimmer_id?: string
+  name?: string
+  date?: string
+  type?: string
+  notes?: string
+  storage_path?: string
+  swimmer_prenom?: string
+  swimmer_nom?: string
+}
+
 export interface HrvEntry {
   date: string
   rmssd: number | null
