@@ -8,6 +8,7 @@ import Sante from './components/Sante'
 import Video from './components/Video'
 import Profil from './components/Profil'
 import Historique from './components/Historique'
+import Dashboard from './components/Dashboard'
 import styles from './swimmer.module.css'
 import type { HrvEntry, PoidsEntry, Perf, SwimmerMeta, VideoEntry, SessionEntry } from './lib/types'
 
@@ -360,6 +361,19 @@ export default function SwimmerClient() {
             </>
           )}
 
+          {activeTab === 'dashboard' && (
+            <>
+              <div className={styles.pageTitle}>Accueil</div>
+              <Dashboard
+                meta={meta}
+                sessions={sessions}
+                hrv={hrv}
+                poids={poids}
+                showToast={showToast}
+              />
+            </>
+          )}
+
           {activeTab === 'training' && (
             <>
               <div className={styles.pageTitle}>Entraînements</div>
@@ -368,7 +382,8 @@ export default function SwimmerClient() {
           )}
 
           {activeTab !== 'perf' && activeTab !== 'sante' && activeTab !== 'video'
-            && activeTab !== 'settings' && activeTab !== 'training' && (
+            && activeTab !== 'settings' && activeTab !== 'training'
+            && activeTab !== 'dashboard' && (
             <div className={styles.placeholder}>Bientôt disponible</div>
           )}
 
