@@ -4,7 +4,7 @@ import { useState } from 'react'
 import styles from './historique.module.css'
 import type { SessionEntry } from '../lib/types'
 
-// ── Helpers (fidèles à swimmer.html) ─────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10)
@@ -14,44 +14,115 @@ function sessionDate(s: SessionEntry): string {
   return String(s.date || s.session_date || s.day || '').slice(0, 10)
 }
 
-function sessionDist(s: SessionEntry): number {
-  let v = Number(s.distance || s.total_distance || s.total || s.volume || s.km || 0)
-  if (v > 0 && v < 100) v = v * 1000
-  return v
+function fkm(m: number)  { return m >= 1000 ? (m / 1000).toFixed(2).replace('.', ',') + ' km' : m + ' m' }
+function fkms(m: number) { return m >= 1000 ? (m / 1000).toFixed(1).replace('.', ',') + ' km' : m + ' m' }
+
+// ── Intensités (identiques à index.html) ─────────────────────────────────
+
+const INTS = ['AEC1', 'AEC2', 'AEC3', 'ANC', 'ANP', 'AEP'] as const
+type IntKey = typeof INTS[number]
+
+const ILABELS: Record<IntKey, string> = {
+  AEC1: 'AEC1', AEC2: 'AEC2', AEC3: 'AEC3',
+  ANC:  'ANC',  ANP:  'ANP',  AEP:  'AEP',
+}
+const ICOLORS: Record<IntKey, string> = {
+  AEC1: '#2176e8', AEC2: '#22c55e', AEC3: '#e6aa00',
+  ANC:  '#ef4444', ANP:  '#a855f7', AEP:  '#f97316',
 }
 
-function fmtDist(m: number): string {
-  if (!m) return '0 m'
-  return m >= 1000
-    ? (Math.round(m / 100) / 10).toLocaleString('fr-FR') + ' km'
-    : Math.round(m) + ' m'
+type SRow = Partial<Record<IntKey, string | number>> & {
+  desc?: string
+  dist?: string | number
 }
 
-function renderFieldValue(v: unknown): string {
-  if (typeof v === 'string' || typeof v === 'number') return String(v)
-  if (Array.isArray(v)) {
-    return v.map(it => {
-      if (typeof it === 'string') return it
-      if (it && typeof it === 'object')
-        return Object.values(it as Record<string, unknown>)
-          .filter(x => typeof x === 'string' || typeof x === 'number')
-          .join(' — ')
-      return ''
-    }).filter(Boolean).join('\n')
-  }
-  if (v && typeof v === 'object') {
-    return Object.values(v as Record<string, unknown>)
-      .filter(x => typeof x === 'string' || typeof x === 'number')
-      .join(' — ')
-  }
-  return ''
-}
+// ── SessionDetail ─────────────────────────────────────────────────────────
 
-const SKIP = new Set([
-  'id', 'club_id', 'coach_id', 'created_at', 'updated_at',
-  'date', 'session_date', 'name', 'titre', 'title',
-  'distance', 'total_distance', 'total', 'volume', 'km',
-])
+function SessionDetail({ s }: { s: SessionEntry }) {
+  const rows = (s.rows ?? []) as SRow[]
+
+  const totDist = rows.reduce((a, r) => a + (parseInt(String(r.dist ?? 0)) || 0), 0)
+
+  const intTots = Object.fromEntries(
+    INTS.map(k => [k, rows.reduce((a, r) => a + (parseInt(String(r[k] ?? 0)) || 0), 0)])
+  ) as Record<IntKey, number>
+
+  const activeInts  = INTS.filter(k => intTots[k] > 0)
+  const visibleRows = rows.filter(r => r.desc || (parseInt(String(r.dist ?? 0)) || 0) > 0)
+
+  return (
+    <div>
+      {/* Nom + bassin */}
+      <div className={styles.sessTitle}>
+        {String(s.name || s.titre || s.title || 'Séance')}
+      </div>
+      {s.pool && <span className={styles.sessPool}>{String(s.pool)} m</span>}
+
+      {/* Stats bar */}
+      {totDist > 0 && (
+        <div className={styles.stb}>
+          <div>
+            <div className={styles.stbLbl}>Distance totale</div>
+            <div className={styles.stbVal}>{fkm(totDist)}</div>
+          </div>
+          {activeInts.length > 0 && <div className={styles.stbSep} />}
+          <div className={styles.stbInts}>
+            {activeInts.map(k => (
+              <div key={k} className={styles.stbI}>
+                <span className={styles.stbILbl}>{ILABELS[k]}</span>
+                <span className={styles.stbIVal} style={{ color: ICOLORS[k] }}>{fkms(intTots[k])}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tableau des séries */}
+      {visibleRows.length > 0 && (
+        <div className={styles.tableWrap}>
+          <table className={styles.xg}>
+            <thead>
+              <tr>
+                <th style={{ width: 26 }}>#</th>
+                <th className={styles.thDesc}>Description</th>
+                <th style={{ width: 68 }}>Dist.</th>
+                {activeInts.map(k => (
+                  <th key={k} className={styles.thInt} style={{ width: 62 }}>{ILABELS[k]}</th>
+                ))}
+                <th className={styles.thTot} style={{ width: 74 }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleRows.map((r, i) => {
+                const d = parseInt(String(r.dist ?? 0)) || 0
+                return (
+                  <tr key={i}>
+                    <td className={styles.xrn}>{i + 1}</td>
+                    <td className={styles.tdDesc}>{r.desc || '—'}</td>
+                    <td className={styles.tdNum}>{d > 0 ? d + ' m' : '—'}</td>
+                    {activeInts.map(k => {
+                      const v = parseInt(String(r[k] ?? 0)) || 0
+                      return (
+                        <td key={k} className={styles.tdNum}
+                          style={{ color: v ? ICOLORS[k] : 'inherit', fontWeight: v ? 600 : 400 }}>
+                          {v ? fkms(v) : ''}
+                        </td>
+                      )
+                    })}
+                    <td className={styles.tdTot}>{d > 0 ? fkms(d) : ''}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Notes */}
+      {s.notes && <div className={styles.sessNotes}>{String(s.notes)}</div>}
+    </div>
+  )
+}
 
 // ── Component ────────────────────────────────────────────────────────────
 
@@ -163,30 +234,12 @@ export default function Historique({ sessions }: Props) {
               <button className={styles.modalX} onClick={() => setDetailDay(null)}>×</button>
             </div>
 
-            {detailSessions.map((s, idx) => {
-              const dist    = sessionDist(s)
-              const title   = String(s.name || s.titre || s.title || 'Séance')
-              const entries = Object.entries(s).filter(
-                ([k, v]) => !SKIP.has(k) && v != null && v !== ''
-              )
-              return (
-                <div key={String(s.id ?? idx)}>
-                  {idx > 0 && <hr className={styles.separator} />}
-                  <div className={styles.sessTitle}>{title}</div>
-                  {dist > 0 && <div className={styles.sessDist}>{fmtDist(dist)}</div>}
-                  {entries.map(([k, v]) => {
-                    const txt = renderFieldValue(v)
-                    if (!txt) return null
-                    return (
-                      <div key={k} className={styles.sessField}>
-                        <div className={styles.fLabel}>{k.replace(/_/g, ' ')}</div>
-                        <div className={styles.sessFieldVal}>{txt}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })}
+            {detailSessions.map((s, idx) => (
+              <div key={String(s.id ?? idx)}>
+                {idx > 0 && <hr className={styles.separator} />}
+                <SessionDetail s={s} />
+              </div>
+            ))}
           </div>
         </div>
       )}

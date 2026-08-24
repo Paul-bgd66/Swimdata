@@ -200,30 +200,76 @@
 .sessTitle {
   font-weight: 700;
   font-size: 0.95rem;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--text);
 }
 
-.sessDist {
-  font-size: 0.8rem;
-  color: var(--c1);
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.sessField { margin-bottom: 8px; }
-
-.fLabel {
-  font-size: 0.7rem;
+.sessPool {
+  display: inline-block;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 3px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border-radius: 5px;
+  padding: 2px 8px;
+  margin-bottom: 8px;
 }
 
-.sessFieldVal {
-  font-size: 0.83rem;
+/* ── Stats bar ── */
+.stb {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--c1);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin: 8px 0 12px;
+  flex-wrap: wrap;
+}
+.stbLbl  { font-size: 0.6rem; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: 1.5px; }
+.stbVal  { font-family: 'Bebas Neue', var(--font-bebas), sans-serif; font-size: 1.4rem; color: #fff; line-height: 1; }
+.stbSep  { width: 1px; height: 26px; background: rgba(255,255,255,.2); flex-shrink: 0; }
+.stbInts { display: flex; gap: 13px; flex-wrap: wrap; }
+.stbI    { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.stbILbl { font-size: 0.56rem; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .5px; }
+.stbIVal { font-family: 'Bebas Neue', var(--font-bebas), sans-serif; font-size: 0.9rem; line-height: 1; }
+
+/* ── Rows table ── */
+.tableWrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.xg { border-collapse: collapse; width: 100%; min-width: 480px; }
+.xg th {
+  background: #0b2550;
+  color: #fff;
+  padding: 8px 9px;
+  font-size: 0.61rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+  text-align: center;
+  border-right: 1px solid rgba(255,255,255,.07);
+}
+.thDesc { text-align: left !important; min-width: 140px; }
+.thInt  { background: #1560bd !important; }
+.thTot  { background: #f5c400 !important; color: #0b2550 !important; }
+.xg td  { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.xrn    { width: 26px; text-align: center; font-size: 0.62rem; color: var(--muted); padding: 9px 3px; font-weight: 600; background: color-mix(in srgb, var(--text) 5%, transparent); }
+.tdDesc { padding: 8px 10px; font-size: 0.82rem; color: var(--text); }
+.tdNum  { text-align: center; font-size: 0.82rem; padding: 8px 4px; color: var(--text); }
+.tdTot  { text-align: center; font-family: 'Bebas Neue', var(--font-bebas), sans-serif; font-size: 0.88rem; color: var(--c1); padding: 8px 4px; }
+
+/* ── Notes ── */
+.sessNotes {
+  font-size: 0.8rem;
+  color: var(--muted);
   white-space: pre-wrap;
-  color: var(--text);
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border-radius: 8px;
 }
