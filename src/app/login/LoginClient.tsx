@@ -9,7 +9,8 @@ const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
 const sb = createClient(SB_URL, SB_ANON)
 
-type State = 'home' | 'login' | 'signup' | 'set-password' | 'success'
+type State    = 'home' | 'login' | 'signup' | 'set-password' | 'success'
+type FlowType = 'invite' | 'recovery'
 
 export default function LoginClient() {
   const router       = useRouter()
@@ -17,6 +18,7 @@ export default function LoginClient() {
 
   const [state, setState]         = useState<State>('home')
   const [pkceUser, setPkceUser]   = useState<User | null>(null)
+  const [flowType, setFlowType]   = useState<FlowType>('invite')
   const [forgotOpen, setForgotOpen] = useState(false)
 
   // form fields
@@ -47,22 +49,25 @@ export default function LoginClient() {
 
   // ── PKCE / implicit flow detection ──────────────────────────────
   useEffect(() => {
+    // PKCE flow (?code=...) — used for both invite and recovery
     const code = searchParams.get('code')
     if (code) {
+      const ft: FlowType = searchParams.get('type') === 'recovery' ? 'recovery' : 'invite'
+      history.replaceState(null, '', window.location.pathname)
       sb.auth.exchangeCodeForSession(code).then(({ data, error }) => {
         if (error) {
           setState('login')
-          setLoginMsg('Lien invalide ou expiré. Demandez une nouvelle invitation.')
+          setLoginMsg('Lien invalide ou expiré.')
           return
         }
-        const user = data?.user ?? null
-        setPkceUser(user)
+        setPkceUser(data?.user ?? null)
+        setFlowType(ft)
         setState('set-password')
       })
       return
     }
 
-    // implicit flow (#access_token=...)
+    // Implicit flow (#access_token=...) — handles both invite and recovery
     if (typeof window === 'undefined') return
     const hash = window.location.hash.slice(1)
     if (!hash) return
@@ -70,17 +75,20 @@ export default function LoginClient() {
       const [k, v] = p.split('=')
       return [decodeURIComponent(k), decodeURIComponent(v ?? '')]
     }))
-    if (params.type !== 'invite' || !params.access_token) return
+    const t = params.type
+    if ((t !== 'invite' && t !== 'recovery') || !params.access_token) return
     history.replaceState(null, '', window.location.pathname)
     sb.auth.setSession({
-      access_token: params.access_token,
+      access_token:  params.access_token,
       refresh_token: params.refresh_token ?? '',
-    }).then(({ error }) => {
+    }).then(({ data, error }) => {
       if (error) {
         setState('login')
-        setLoginMsg('Lien invalide ou expiré. Demandez une nouvelle invitation.')
+        setLoginMsg('Lien invalide ou expiré.')
         return
       }
+      setPkceUser(data?.user ?? null)
+      setFlowType(t === 'recovery' ? 'recovery' : 'invite')
       setState('set-password')
     })
   }, [searchParams])
@@ -143,7 +151,13 @@ export default function LoginClient() {
     const { error } = await sb.auth.updateUser({ password: invitePassword, data: { passwordSet: true } })
     setInviteLoading(false)
     if (error) { setInviteMsg({ text: error.message, ok: false }); return }
-    showWelcomeAndRedirect()
+    if (flowType === 'recovery') {
+      // Redirect based on role — coaches land on /index.html, swimmers on /swimmer.html
+      const role = pkceUser?.user_metadata?.role
+      router.push(role === 'swimmer' ? '/swimmer.html' : '/index.html')
+    } else {
+      showWelcomeAndRedirect()
+    }
   }
 
   // ── render ───────────────────────────────────────────────────────
@@ -251,11 +265,13 @@ export default function LoginClient() {
           </div>
         )}
 
-        {/* SET PASSWORD (invite nageur) */}
+        {/* SET PASSWORD — invite nageur ou recovery */}
         {state === 'set-password' && (
           <div>
             <p className={styles.inviteWelcome}>
-              Bienvenue ! Choisissez un mot de passe pour activer votre compte.
+              {flowType === 'recovery'
+                ? 'Choisissez un nouveau mot de passe.'
+                : 'Bienvenue ! Choisissez un mot de passe pour activer votre compte.'}
             </p>
             {pkceUser?.email && (
               <p className={styles.inviteEmail}>{pkceUser.email}</p>
