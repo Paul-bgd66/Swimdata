@@ -36,7 +36,26 @@ type SRow = Partial<Record<IntKey, string | number>> & {
   dist?: string | number
 }
 
-// ── SessionDetail ─────────────────────────────────────────────────────────
+// ── SessionSummary — niveau 1 ─────────────────────────────────────────────
+
+function SessionSummary({ s, onOpen }: { s: SessionEntry; onOpen: () => void }) {
+  const rows    = (s.rows ?? []) as SRow[]
+  const totDist = rows.reduce((a, r) => a + (parseInt(String(r.dist ?? 0)) || 0), 0)
+
+  return (
+    <div className={styles.summaryRow}>
+      <div className={styles.summaryInfo}>
+        <div className={styles.summaryName}>
+          {String(s.name || s.titre || s.title || 'Séance')}
+        </div>
+        {totDist > 0 && <div className={styles.summaryDist}>{fkm(totDist)}</div>}
+      </div>
+      <button className={styles.openBtn} onClick={onOpen}>Ouvrir</button>
+    </div>
+  )
+}
+
+// ── SessionDetail — niveau 2 (lecture seule, identique à viewSeanceReadonly) ──
 
 function SessionDetail({ s }: { s: SessionEntry }) {
   const rows = (s.rows ?? []) as SRow[]
@@ -77,7 +96,7 @@ function SessionDetail({ s }: { s: SessionEntry }) {
         </div>
       )}
 
-      {/* Tableau des séries */}
+      {/* Tableau des séries — scroll horizontal sur mobile */}
       {visibleRows.length > 0 && (
         <div className={styles.tableWrap}>
           <table className={styles.xg}>
@@ -141,12 +160,15 @@ export default function Historique({ sessions }: Props) {
   })
 
   // ── Calendrier ────────────────────────────────────────────────────────
-  const [calDate,   setCalDate]   = useState(() => new Date())
-  const [detailDay, setDetailDay] = useState<string | null>(null)
+  const [calDate,       setCalDate]       = useState(() => new Date())
+  const [detailDay,     setDetailDay]     = useState<string | null>(null)
+  const [detailSession, setDetailSession] = useState<SessionEntry | null>(null)
 
   function calShift(n: number) {
     setCalDate(prev => new Date(prev.getFullYear(), prev.getMonth() + n, 1))
   }
+
+  function closeAll() { setDetailDay(null); setDetailSession(null) }
 
   const byDate: Record<string, SessionEntry[]> = {}
   past.forEach(s => {
@@ -160,8 +182,6 @@ export default function Historique({ sessions }: Props) {
   const monthLabel = new Date(y, mo, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
   const firstDow   = (new Date(y, mo, 1).getDay() + 6) % 7
   const nbDays     = new Date(y, mo + 1, 0).getDate()
-
-  const detailSessions = detailDay ? (byDate[detailDay] ?? []) : []
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
@@ -223,23 +243,38 @@ export default function Historique({ sessions }: Props) {
         <div className={styles.empty}>Aucune séance enregistrée pour le moment.</div>
       )}
 
-      {/* ── Modal détail ── */}
-      {detailDay && (
-        <div className={styles.modalBk} onClick={() => setDetailDay(null)}>
+      {/* ── Niveau 1 : résumé du jour ── */}
+      {detailDay && !detailSession && (
+        <div className={styles.modalBk} onClick={closeAll}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <div className={styles.modalTitle}>
               {new Date(detailDay + 'T12:00:00').toLocaleDateString('fr-FR', {
                 weekday: 'long', day: 'numeric', month: 'long',
               })}
-              <button className={styles.modalX} onClick={() => setDetailDay(null)}>×</button>
+              <button className={styles.modalX} onClick={closeAll}>×</button>
             </div>
 
-            {detailSessions.map((s, idx) => (
+            {(byDate[detailDay] ?? []).map((s, idx) => (
               <div key={String(s.id ?? idx)}>
                 {idx > 0 && <hr className={styles.separator} />}
-                <SessionDetail s={s} />
+                <SessionSummary s={s} onOpen={() => setDetailSession(s)} />
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Niveau 2 : détail complet (lecture seule) ── */}
+      {detailSession && (
+        <div className={styles.modalBk} onClick={closeAll}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalTitle}>
+              <button className={styles.backBtn} onClick={() => setDetailSession(null)}>
+                ← Retour
+              </button>
+              <button className={styles.modalX} onClick={closeAll}>×</button>
+            </div>
+            <SessionDetail s={detailSession} />
           </div>
         </div>
       )}
