@@ -106,7 +106,7 @@ export default function LoginClient() {
     const firstName = pkceUser?.user_metadata?.firstName ?? ''
     setSuccessMsg('Bienvenue' + (firstName ? ' ' + firstName : '') + ' ! Ton compte est prêt.')
     setState('success')
-    setTimeout(() => router.push('/swimmer.html'), 2000)
+    setTimeout(() => router.push('/swimmer'), 2000)
   }
 
   // ── actions ─────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ export default function LoginClient() {
     setLoginLoading(false)
     if (error) { setLoginMsg(error.message); return }
     const role = data?.user?.user_metadata?.role
-    router.push(role === 'swimmer' ? '/swimmer.html' : '/index.html')
+    router.push(role === 'swimmer' ? '/swimmer' : '/index.html')
   }
 
   async function submitSignup() {
@@ -152,9 +152,9 @@ export default function LoginClient() {
     setInviteLoading(false)
     if (error) { setInviteMsg({ text: error.message, ok: false }); return }
     if (flowType === 'recovery') {
-      // Redirect based on role — coaches land on /index.html, swimmers on /swimmer.html
+      // Redirect based on role — coaches land on /index.html, swimmers on /swimmer
       const role = pkceUser?.user_metadata?.role
-      router.push(role === 'swimmer' ? '/swimmer.html' : '/index.html')
+      router.push(role === 'swimmer' ? '/swimmer' : '/index.html')
     } else {
       showWelcomeAndRedirect()
     }
