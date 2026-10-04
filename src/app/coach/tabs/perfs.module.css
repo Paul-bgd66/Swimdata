@@ -1,0 +1,367 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 24px 0;
+  margin: 0;
+}
+
+/* ── Bassin toggle ── */
+.bassinToggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.bassinBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.bassinBtn.active {
+  border-color: var(--c1);
+  background: color-mix(in srgb, var(--c1) 8%, transparent);
+  color: var(--c1);
+}
+
+/* ── Swimmer accordion card ── */
+.card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cardHdr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: var(--bg);
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.cardHdr:hover {
+  background: color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: 'Bebas Neue', var(--font-bebas), sans-serif;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.cardName {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardCount {
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chevron {
+  font-size: 0.75rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ── Card body ── */
+.cardBody {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+
+.emptyPerf {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 16px 0;
+  margin: 0 0 12px;
+}
+
+/* ── Perf table ── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+}
+
+.th {
+  text-align: left;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--border);
+}
+
+.thSb { color: var(--c1); text-align: center; }
+.thPb { color: #f59e0b; text-align: center; }
+
+.tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.tr:hover { background: color-mix(in srgb, var(--border) 30%, transparent); }
+
+.td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tdSb { text-align: center; color: var(--c1); }
+.tdPb { text-align: center; color: #f59e0b; }
+
+/* ── Add perf dashed button ── */
+.addPerfBtn {
+  width: 100%;
+  padding: 10px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--c1);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 600;
+  font-size: 0.83rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.addPerfBtn:hover {
+  background: color-mix(in srgb, var(--c1) 6%, transparent);
+  border-color: var(--c1);
+}
+
+/* ── Modal backdrop ── */
+.modalBk {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalHdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modalTitle {
+  font-family: 'Bebas Neue', var(--font-bebas), sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+/* ── History rows ── */
+.histRow {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.histDate {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.histTemps {
+  font-family: 'Bebas Neue', var(--font-bebas), sans-serif;
+  font-size: 1.1rem;
+  color: var(--c1);
+}
+
+.histDel {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px 6px;
+}
+
+/* ── Add perf form ── */
+.fLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: -6px;
+}
+
+.fSelect,
+.fInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.fSelect:focus,
+.fInput:focus { border-color: var(--c1); }
+
+.fErr {
+  font-size: 0.82rem;
+  color: #ef4444;
+  margin: -4px 0 0;
+}
+
+.submitBtn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-top: 4px;
+}
+
+.submitBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Confirm modal ── */
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirmBox {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirmTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.confirmMsg {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.confirmBtns {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.confirmCancel {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.confirmDelete {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}

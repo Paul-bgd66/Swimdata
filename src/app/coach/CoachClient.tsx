@@ -10,6 +10,7 @@ import type { Club, Nageur } from '@/lib/types'
 import { resolveClubColors } from '@/lib/constants'
 import { t } from '@/lib/i18n'
 import Coachs from './tabs/Coachs'
+import Perfs  from './tabs/Perfs'
 
 const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
@@ -220,6 +221,8 @@ export default function CoachClient() {
 
             {activeTab === 'coachs' ? (
               <Coachs />
+            ) : activeTab === 'perf' ? (
+              <Perfs />
             ) : (
               <div className={styles.placeholder}>
                 {t('not.migrated', lang)}
