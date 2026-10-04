@@ -9,9 +9,10 @@ import type { CoachContextValue, CoachInfo } from '@/lib/coach-context'
 import type { Club, Nageur } from '@/lib/types'
 import { resolveClubColors } from '@/lib/constants'
 import { t } from '@/lib/i18n'
-import Coachs from './tabs/Coachs'
-import Perfs  from './tabs/Perfs'
-import Poids  from './tabs/Poids'
+import Coachs    from './tabs/Coachs'
+import Perfs     from './tabs/Perfs'
+import Poids     from './tabs/Poids'
+import Planning  from './tabs/Planning'
 
 const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
@@ -226,6 +227,8 @@ export default function CoachClient() {
               <Perfs />
             ) : activeTab === 'poids' ? (
               <Poids />
+            ) : activeTab === 'planning' ? (
+              <Planning />
             ) : (
               <div className={styles.placeholder}>
                 {t('not.migrated', lang)}

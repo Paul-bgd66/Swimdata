@@ -1,12 +1,13 @@
 // /api/planning.js
-// GET  ?clubId=&coachId=           → { weeks: [...] } triées start_date ASC
-// PUT  { clubId, coachId, weeks[] } → upsert semaines par week_id
+// GET    ?clubId=&coachId=           → { weeks: [...] } triées start_date ASC
+// PUT    { clubId, coachId, weeks[] } → upsert semaines par week_id
+// DELETE ?clubId=&coachId=&weekId=   → supprime une semaine
 
 import { createClient } from '@supabase/supabase-js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -81,6 +82,20 @@ export default async function handler(req) {
       return json(null, 500, { error: error.message });
     }
     return json(null, 200, { ok: true, count: rows.length });
+  }
+
+  // ── DELETE ?clubId=&coachId=&weekId= ─────────────────────────────
+  if (req.method === 'DELETE') {
+    const clubId  = url.searchParams.get('clubId');
+    const coachId = url.searchParams.get('coachId');
+    const weekId  = url.searchParams.get('weekId');
+    if (!clubId || !coachId || !weekId)
+      return json(null, 400, { error: 'clubId, coachId, weekId required' });
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const { error } = await supabase.from('planning').delete()
+      .eq('club_id', clubId).eq('coach_id', coachId).eq('week_id', weekId);
+    if (error) return json(null, 500, { error: error.message });
+    return json(null, 200, { ok: true });
   }
 
   return json(null, 405, { error: 'Method not allowed' });
