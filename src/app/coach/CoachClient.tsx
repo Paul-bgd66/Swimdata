@@ -9,6 +9,7 @@ import type { CoachContextValue, CoachInfo } from '@/lib/coach-context'
 import type { Club, Nageur } from '@/lib/types'
 import { resolveClubColors } from '@/lib/constants'
 import { t } from '@/lib/i18n'
+import Coachs from './tabs/Coachs'
 
 const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
@@ -84,17 +85,14 @@ export default function CoachClient() {
 
   async function init() {
     try {
-      console.log('[coach:init] step 1 — getSession')
       const { data: { session } } = await sb.auth.getSession()
-      console.log('[coach:init] session=', session ? 'found' : 'null')
-      if (!session) { console.log('[coach:init] → redirect /login (no session)'); router.push('/login'); return }
+      if (!session) { router.push('/login'); return }
 
       const user = session.user
       const m    = (user.user_metadata ?? {}) as Record<string, string>
-      console.log('[coach:init] step 2 — role=', m.role, 'userId=', user.id)
 
-      if (m.role === 'swimmer') { console.log('[coach:init] → redirect /swimmer'); router.push('/swimmer'); return }
-      if (m.role !== 'coach' && m.role !== 'manager') { console.log('[coach:init] → redirect /login (bad role:', m.role, ')'); router.push('/login'); return }
+      if (m.role === 'swimmer') { router.push('/swimmer'); return }
+      if (m.role !== 'coach' && m.role !== 'manager') { router.push('/login'); return }
 
       const name = ((m.firstName ?? '') + ' ' + (m.lastName ?? '')).trim()
         || (user.email ?? '').split('@')[0]
@@ -114,13 +112,10 @@ export default function CoachClient() {
       if (savedMode === 'indiv') setCoachMode('indiv')
 
       // Resolve club_id via /api/coaches (service key bypasses RLS)
-      console.log('[coach:init] step 3 — fetch /api/coaches?userId=', user.id)
       const coachRes = await fetch('/api/coaches?userId=' + encodeURIComponent(user.id))
-      console.log('[coach:init] /api/coaches status=', coachRes.status)
       if (!coachRes.ok) throw new Error('Coach introuvable (statut ' + coachRes.status + ')')
       const coachData = await coachRes.json() as { club_id: string }
       const clubId = coachData.club_id
-      console.log('[coach:init] step 4 — clubId=', clubId)
       if (!clubId) throw new Error('Aucun club associé à ce compte coach.')
 
       // Parallel: club data + nageurs
@@ -129,12 +124,9 @@ export default function CoachClient() {
         fetch('/api/nageurs?coachId=' + encodeURIComponent(user.id) + '&clubId=' + encodeURIComponent(clubId)),
       ])
 
-      console.log('[coach:init] step 5 — /api/clubs status=', clubRes.status, '/api/nageurs status=', nageursRes.status)
       if (!clubRes.ok) throw new Error('Club introuvable (statut ' + clubRes.status + ')')
       const clubData = await clubRes.json() as Club
       setClub(clubData)
-
-      // Apply club branding
       setColors(resolveClubColors(clubData))
 
       if (nageursRes.ok) {
@@ -142,10 +134,8 @@ export default function CoachClient() {
         setNageurs(Array.isArray(nagData) ? nagData : [])
       }
 
-      console.log('[coach:init] step 6 — ready ✓')
       setStatus('ready')
     } catch (e) {
-      console.error('[coach:init] catch error:', (e as Error).message)
       setStatus('error')
       setErrorMsg((e as Error).message)
     }
@@ -225,13 +215,17 @@ export default function CoachClient() {
               {activeTabDef ? t(activeTabDef.labelKey, lang) : ''}
             </div>
 
-            <div className={styles.placeholder}>
-              {t('not.migrated', lang)}
-              <br />
-              <a className={styles.placeholderLink} href="/index.html">
-                {t('old.version', lang)}
-              </a>
-            </div>
+            {activeTab === 'coachs' ? (
+              <Coachs />
+            ) : (
+              <div className={styles.placeholder}>
+                {t('not.migrated', lang)}
+                <br />
+                <a className={styles.placeholderLink} href="/index.html">
+                  {t('old.version', lang)}
+                </a>
+              </div>
+            )}
           </div>
         </main>
 
