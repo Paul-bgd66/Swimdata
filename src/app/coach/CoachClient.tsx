@@ -114,9 +114,12 @@ export default function CoachClient() {
       // Resolve club_id via /api/coaches (service key bypasses RLS)
       const coachRes = await fetch('/api/coaches?userId=' + encodeURIComponent(user.id))
       if (!coachRes.ok) throw new Error('Coach introuvable (statut ' + coachRes.status + ')')
-      const coachData = await coachRes.json() as { club_id: string }
+      const coachData = await coachRes.json() as { club_id: string; role?: string }
       const clubId = coachData.club_id
       if (!clubId) throw new Error('Aucun club associé à ce compte coach.')
+
+      // Use coaches-table role (authoritative) over user_metadata.role
+      if (coachData.role) setCoach(prev => prev ? { ...prev, role: coachData.role! } : prev)
 
       // Parallel: club data + nageurs
       const [clubRes, nageursRes] = await Promise.all([
