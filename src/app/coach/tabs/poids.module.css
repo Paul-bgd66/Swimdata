@@ -1,0 +1,292 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 24px 0;
+  margin: 0;
+}
+
+/* ── Swimmer chips nav ── */
+.nav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.chipActive { color: #fff; }
+
+.chip:not(.chipActive):hover {
+  background: color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+/* ── Section label ── */
+.sectionLabel {
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 10px;
+}
+
+/* ── Summary card ── */
+.summaryCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.summaryName {
+  font-family: 'Bebas Neue', var(--font-bebas), sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 1px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.summaryWeight {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+.summaryDiff {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.summaryDate {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+/* ── Chart card ── */
+.chartCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.chartWrap {
+  height: 160px;
+  position: relative;
+}
+
+.chartWrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.chartEmpty {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* ── Add form card ── */
+.addCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.addRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fInput {
+  flex: 1;
+  min-width: 120px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.fInput:focus { border-color: var(--c1); }
+
+.addBtn {
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.addBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.err {
+  font-size: 0.82rem;
+  color: #ef4444;
+  margin: 6px 0 0;
+}
+
+/* ── History card ── */
+.histCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.histRow {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.histDate {
+  flex: 1;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.histWeight {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.histDiff {
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 44px;
+  text-align: right;
+}
+
+.histDel {
+  background: none;
+  border: none;
+  color: #dde5f0;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  transition: color 0.15s;
+}
+
+.histDel:hover { color: #ef4444; }
+
+/* ── Confirm modal ── */
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirmBox {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirmTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.confirmMsg {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.confirmBtns {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.confirmCancel {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.confirmDelete {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}

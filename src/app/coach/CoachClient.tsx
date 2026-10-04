@@ -11,6 +11,7 @@ import { resolveClubColors } from '@/lib/constants'
 import { t } from '@/lib/i18n'
 import Coachs from './tabs/Coachs'
 import Perfs  from './tabs/Perfs'
+import Poids  from './tabs/Poids'
 
 const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
@@ -223,6 +224,8 @@ export default function CoachClient() {
               <Coachs />
             ) : activeTab === 'perf' ? (
               <Perfs />
+            ) : activeTab === 'poids' ? (
+              <Poids />
             ) : (
               <div className={styles.placeholder}>
                 {t('not.migrated', lang)}
