@@ -326,11 +326,12 @@ export default function GroupeSelect() {
                     onChange={e => handleNageurGroupe(n, e.target.value || null)}
                   >
                     <option value="">— Sans groupe —</option>
-                    {groupes.map(g => (
-                      <option key={g.id} value={g.id}>
-                        {g.parentId ? `  ↳ ${g.nom}` : g.nom}
-                      </option>
-                    ))}
+                    {racine.flatMap(r => [
+                      <option key={r.id} value={r.id}>{r.nom}</option>,
+                      ...(sousGrMap[r.id] || []).map(sg => (
+                        <option key={sg.id} value={sg.id}>{`  ↳ ${sg.nom}`}</option>
+                      )),
+                    ])}
                   </select>
                 </div>
               ))}
