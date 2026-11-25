@@ -51,6 +51,23 @@
   white-space: nowrap;
 }
 
+.hdrGroupe {
+  flex: 1;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--c1);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hdrGroupe:hover { opacity: 0.8; }
+
 .hdrName {
   font-size: 0.78rem;
   font-weight: 600;

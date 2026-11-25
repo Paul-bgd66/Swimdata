@@ -47,7 +47,7 @@ interface AddModal  { nageur: Nageur }
 interface Confirm   { title: string; msg: string; onConfirm: () => void }
 
 export default function Perfs() {
-  const { club, coach, nageurs, colors, showToast } = useCoach()
+  const { club, coach, nagueursFiltres: nageurs, colors, showToast } = useCoach()
 
   const [perfsMap,  setPerfsMap]  = useState<Record<string, Perf[]>>({})
   const [loading,   setLoading]   = useState(true)

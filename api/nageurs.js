@@ -8,7 +8,7 @@ export const config = { runtime: 'edge' };
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -25,6 +25,18 @@ export default async function handler(req) {
   const url = new URL(req.url);
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+  if (req.method === 'PATCH') {
+    let body;
+    try { body = await req.json(); } catch { return json(400, { error: 'Invalid JSON' }); }
+    const { id, groupeId } = body;
+    if (!id) return json(400, { error: 'id requis' });
+    const { error } = await sb.from('nageurs')
+      .update({ groupe_id: groupeId || null })
+      .eq('id', id);
+    if (error) return json(500, { error: error.message });
+    return json(200, { ok: true });
+  }
+
   if (req.method === 'DELETE') {
     const id = url.searchParams.get('id');
     if (!id) return json(400, { error: 'id requis' });
@@ -40,7 +52,7 @@ export default async function handler(req) {
 
   if (!coachId && !clubId) return json(400, { error: 'coachId ou clubId requis' });
 
-  let query = sb.from('nageurs').select('id, prenom, nom, email, created_at').eq('active', true);
+  let query = sb.from('nageurs').select('id, prenom, nom, email, groupe_id, created_at').eq('active', true);
   if (coachId) query = query.eq('coach_id', coachId);
   if (clubId) query = query.eq('club_id', clubId);
 

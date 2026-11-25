@@ -87,7 +87,7 @@ interface Confirm { title: string; msg: string; onConfirm: () => void }
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Poids() {
-  const { club, coach, nageurs, colors, showToast } = useCoach()
+  const { club, coach, nagueursFiltres: nageurs, colors, showToast } = useCoach()
 
   const [entriesMap, setEntriesMap] = useState<Record<string, PoidsEntry[]>>({})
   const [loading,    setLoading]    = useState(true)

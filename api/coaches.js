@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -34,12 +34,12 @@ export default async function handler(req) {
     // Résolution club_id depuis l'UUID auth ou l'email du coach (service key → contourne RLS)
     if (userId || email) {
       const sb = supabase();
-      let q = sb.from('coaches').select('club_id, role');
+      let q = sb.from('coaches').select('club_id, role, dernier_groupe_id');
       q = userId ? q.eq('id', userId) : q.eq('email', email);
       const { data, error } = await q.maybeSingle();
       if (error) return json(500, { error: error.message });
       if (!data || !data.club_id) return json(404, { error: 'Coach not found' });
-      return json(200, { club_id: data.club_id, role: data.role });
+      return json(200, { club_id: data.club_id, role: data.role, dernier_groupe_id: data.dernier_groupe_id });
     }
 
     if (!clubId) return json(400, { error: 'clubId, userId or email required' });
@@ -72,6 +72,22 @@ export default async function handler(req) {
 
     const { password_hash: _, ...safe } = data;
     return json(200, safe);
+  }
+
+  // ── PATCH { coachId, dernierGroupeId } ──────────────────────────────────
+  if (req.method === 'PATCH') {
+    let body;
+    try { body = await req.json(); } catch { return json(400, { error: 'Invalid JSON' }); }
+    const { coachId, dernierGroupeId } = body;
+    if (!coachId) return json(400, { error: 'coachId required' });
+
+    const { error } = await supabase()
+      .from('coaches')
+      .update({ dernier_groupe_id: dernierGroupeId || null })
+      .eq('id', coachId);
+
+    if (error) return json(500, { error: error.message });
+    return json(200, { ok: true });
   }
 
   return json(405, { error: 'Method not allowed' });

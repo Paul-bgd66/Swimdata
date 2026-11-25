@@ -29,7 +29,17 @@ export interface Nageur {
   prenom: string
   nom: string
   email?: string
+  groupe_id?: string | null
   created_at?: string
+}
+
+export interface Groupe {
+  id: string
+  clubId: string
+  coachId: string
+  parentId: string | null
+  nom: string
+  createdAt?: string
 }
 
 // ── Shared swim types (mirrors swimmer/lib/types.ts) ─────────────────────

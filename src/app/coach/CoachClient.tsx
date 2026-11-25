@@ -6,13 +6,15 @@ import { createClient } from '@supabase/supabase-js'
 import styles from './coach.module.css'
 import { CoachContext } from '@/lib/coach-context'
 import type { CoachContextValue, CoachInfo } from '@/lib/coach-context'
-import type { Club, Nageur } from '@/lib/types'
+import type { Club, Nageur, Groupe } from '@/lib/types'
 import { resolveClubColors } from '@/lib/constants'
 import { t } from '@/lib/i18n'
-import Coachs    from './tabs/Coachs'
-import Perfs     from './tabs/Perfs'
-import Poids     from './tabs/Poids'
-import Planning  from './tabs/Planning'
+import Coachs      from './tabs/Coachs'
+import Perfs       from './tabs/Perfs'
+import Poids       from './tabs/Poids'
+import Planning    from './tabs/Planning'
+import GroupeSelect from './GroupeSelect'
+import SubGroupeFilter from './components/SubGroupeFilter'
 
 const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
 const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
@@ -70,18 +72,21 @@ const TABS: { id: Tab; labelKey: string; icon: React.ReactNode }[] = [
 export default function CoachClient() {
   const router = useRouter()
 
-  const [status,    setStatus]    = useState<'loading' | 'ready' | 'error'>('loading')
+  const [status,    setStatus]    = useState<'loading' | 'group_select' | 'ready' | 'error'>('loading')
   const [errorMsg,  setErrorMsg]  = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('seance')
 
-  const [club,      setClub]      = useState<Club | null>(null)
-  const [coach,     setCoach]     = useState<CoachInfo | null>(null)
-  const [nageurs,   setNageurs]   = useState<Nageur[]>([])
-  const [colors,    setColors]    = useState({ c1: '#1560bd', c2: '#f5c400' })
-  const [theme,     setTheme]     = useState('light')
-  const [lang,      setLangState] = useState('fr')
-  const [coachMode, setCoachMode] = useState<'club' | 'indiv'>('club')
-  const [toast,     setToast]     = useState('')
+  const [club,            setClub]            = useState<Club | null>(null)
+  const [coach,           setCoach]           = useState<CoachInfo | null>(null)
+  const [nageurs,         setNageurs]         = useState<Nageur[]>([])
+  const [colors,          setColors]          = useState({ c1: '#1560bd', c2: '#f5c400' })
+  const [theme,           setTheme]           = useState('light')
+  const [lang,            setLangState]       = useState('fr')
+  const [coachMode,       setCoachMode]       = useState<'club' | 'indiv'>('club')
+  const [toast,           setToast]           = useState('')
+  const [groupes,         setGroupes]         = useState<Groupe[]>([])
+  const [groupeActifState, setGroupeActifState] = useState<Groupe | null>(null)
+  const [sousGroupeActif, setSousGroupeActif] = useState<Groupe | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { init() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -117,17 +122,18 @@ export default function CoachClient() {
       // Resolve club_id via /api/coaches (service key bypasses RLS)
       const coachRes = await fetch('/api/coaches?userId=' + encodeURIComponent(user.id))
       if (!coachRes.ok) throw new Error('Coach introuvable (statut ' + coachRes.status + ')')
-      const coachData = await coachRes.json() as { club_id: string; role?: string }
+      const coachData = await coachRes.json() as { club_id: string; role?: string; dernier_groupe_id?: string | null }
       const clubId = coachData.club_id
       if (!clubId) throw new Error('Aucun club associé à ce compte coach.')
 
       // Use coaches-table role (authoritative) over user_metadata.role
       if (coachData.role) setCoach(prev => prev ? { ...prev, role: coachData.role! } : prev)
 
-      // Parallel: club data + nageurs
-      const [clubRes, nageursRes] = await Promise.all([
+      // Parallel: club data + nageurs + groupes
+      const [clubRes, nageursRes, groupesRes] = await Promise.all([
         fetch('/api/clubs?id=' + encodeURIComponent(clubId)),
         fetch('/api/nageurs?coachId=' + encodeURIComponent(user.id) + '&clubId=' + encodeURIComponent(clubId)),
+        fetch('/api/groupes?coachId=' + encodeURIComponent(user.id) + '&clubId=' + encodeURIComponent(clubId)),
       ])
 
       if (!clubRes.ok) throw new Error('Club introuvable (statut ' + clubRes.status + ')')
@@ -140,12 +146,49 @@ export default function CoachClient() {
         setNageurs(Array.isArray(nagData) ? nagData : [])
       }
 
-      setStatus('ready')
+      const allGroupes: Groupe[] = groupesRes.ok
+        ? ((await groupesRes.json()) as { groupes?: Groupe[] }).groupes ?? []
+        : []
+      setGroupes(allGroupes)
+
+      const racine = allGroupes.filter(g => !g.parentId)
+      const dernierGroupeId = coachData.dernier_groupe_id
+      const toSelect = racine.find(g => g.id === dernierGroupeId)
+        ?? (racine.length === 1 ? racine[0] : null)
+
+      if (toSelect) {
+        setGroupeActifState(toSelect)
+        setStatus('ready')
+      } else {
+        setStatus('group_select')
+      }
     } catch (e) {
       setStatus('error')
       setErrorMsg((e as Error).message)
     }
   }
+
+  const setGroupeActif = useCallback((g: Groupe) => {
+    setGroupeActifState(g)
+    setSousGroupeActif(null)
+    setStatus('ready')
+    if (coach) {
+      fetch('/api/coaches', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId: coach.id, dernierGroupeId: g.id }),
+      }).catch(() => {})
+    }
+  }, [coach]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const showGroupeSelect = useCallback(() => {
+    setStatus('group_select')
+    setSousGroupeActif(null)
+  }, [])
+
+  const updateGroupes = useCallback((gs: Groupe[]) => {
+    setGroupes(gs)
+  }, [])
 
   const showToast = useCallback((msg: string) => {
     setToast(msg)
@@ -164,10 +207,26 @@ export default function CoachClient() {
     router.push('/login')
   }
 
+  const sousGroupes = useMemo(
+    () => groupeActifState ? groupes.filter(g => g.parentId === groupeActifState.id) : [],
+    [groupes, groupeActifState]
+  )
+
+  const nagueursFiltres = useMemo(() => {
+    if (!groupeActifState) return nageurs
+    if (sousGroupeActif) return nageurs.filter(n => n.groupe_id === sousGroupeActif.id)
+    const ids = new Set([groupeActifState.id, ...sousGroupes.map(sg => sg.id)])
+    return nageurs.filter(n => n.groupe_id != null && ids.has(n.groupe_id))
+  }, [nageurs, groupeActifState, sousGroupeActif, sousGroupes])
+
   const ctxValue = useMemo<CoachContextValue>(() => ({
     club, coach, nageurs, colors, theme, lang, coachMode,
     setCoachMode, setLang, showToast,
-  }), [club, coach, nageurs, colors, theme, lang, coachMode, showToast]) // eslint-disable-line react-hooks/exhaustive-deps
+    groupes, groupeActif: groupeActifState, sousGroupes, sousGroupeActif, nagueursFiltres,
+    setGroupeActif, setSousGroupeActif, showGroupeSelect, updateGroupes,
+  }), [club, coach, nageurs, colors, theme, lang, coachMode, showToast, // eslint-disable-line react-hooks/exhaustive-deps
+      groupes, groupeActifState, sousGroupes, sousGroupeActif, nagueursFiltres,
+      setGroupeActif, showGroupeSelect, updateGroupes])
 
   if (status === 'loading') {
     return <div className={styles.loadingScreen}>SWIMDATA…</div>
@@ -189,7 +248,13 @@ export default function CoachClient() {
         {/* ── Header ── */}
         <header className={styles.hdr}>
           <span className={styles.hdrLogo}>SWIMDATA</span>
-          <span className={styles.hdrClub}>{club?.short_name || club?.name || ''}</span>
+          {status === 'ready' && groupeActifState ? (
+            <button className={styles.hdrGroupe} onClick={showGroupeSelect} title="Changer de groupe">
+              ← {groupeActifState.nom}
+            </button>
+          ) : (
+            <span className={styles.hdrClub}>{club?.short_name || club?.name || ''}</span>
+          )}
           <span className={styles.hdrName}>{coach?.name || ''}</span>
           <button className={styles.hdrOut} onClick={handleLogout} title={t('logout', lang)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -217,26 +282,32 @@ export default function CoachClient() {
         {/* ── Main ── */}
         <main className={styles.main}>
           <div className={styles.inner}>
-            <div className={styles.pageTitle}>
-              {activeTabDef ? t(activeTabDef.labelKey, lang) : ''}
-            </div>
-
-            {activeTab === 'coachs' ? (
-              <Coachs />
-            ) : activeTab === 'perf' ? (
-              <Perfs />
-            ) : activeTab === 'poids' ? (
-              <Poids />
-            ) : activeTab === 'planning' ? (
-              <Planning />
+            {status === 'group_select' ? (
+              <GroupeSelect />
             ) : (
-              <div className={styles.placeholder}>
-                {t('not.migrated', lang)}
-                <br />
-                <a className={styles.placeholderLink} href="/index.html">
-                  {t('old.version', lang)}
-                </a>
-              </div>
+              <>
+                <div className={styles.pageTitle}>
+                  {activeTabDef ? t(activeTabDef.labelKey, lang) : ''}
+                </div>
+                <SubGroupeFilter />
+                {activeTab === 'coachs' ? (
+                  <Coachs />
+                ) : activeTab === 'perf' ? (
+                  <Perfs />
+                ) : activeTab === 'poids' ? (
+                  <Poids />
+                ) : activeTab === 'planning' ? (
+                  <Planning />
+                ) : (
+                  <div className={styles.placeholder}>
+                    {t('not.migrated', lang)}
+                    <br />
+                    <a className={styles.placeholderLink} href="/index.html">
+                      {t('old.version', lang)}
+                    </a>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>

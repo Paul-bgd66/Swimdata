@@ -1,0 +1,317 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.title {
+  font-family: 'Bebas Neue', var(--font-bebas), sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 2px;
+  color: var(--text);
+}
+
+/* ── Group cards ── */
+.groupCard {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.groupCardHdr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.groupNom {
+  flex: 1;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.groupCount {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.enterBtn {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.enterBtn:hover { opacity: 0.85; }
+
+.iconBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.iconBtn:hover { color: var(--text); }
+
+/* ── Sub-groups section inside a card ── */
+.sgSection {
+  border-top: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sgRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sgNom {
+  flex: 1;
+  font-size: 0.82rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.addSgBtn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 5px 12px;
+  border: 1.5px dashed var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.addSgBtn:hover { border-color: var(--c1); color: var(--c1); }
+
+/* ── Inline edit row ── */
+.inlineEdit {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.inlineInput {
+  flex: 1;
+  height: 34px;
+  padding: 0 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  font-size: 0.84rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  outline: none;
+}
+
+.inlineInput:focus { border-color: var(--c1); }
+
+.inlineSave {
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.inlineCancel {
+  height: 34px;
+  padding: 0 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Add new group button ── */
+.addGroupBtn {
+  align-self: flex-start;
+  padding: 9px 20px;
+  border: 1.5px solid var(--c1);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--c1);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.addGroupBtn:hover {
+  background: color-mix(in srgb, var(--c1) 8%, transparent);
+}
+
+/* ── Manage swimmers section ── */
+.mgrToggle {
+  align-self: flex-start;
+  padding: 7px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.mgrToggle:hover { color: var(--text); }
+
+.mgrSection {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mgrTitle {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mgrRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mgrName {
+  flex: 1;
+  font-size: 0.84rem;
+  color: var(--text);
+}
+
+.mgrSelect {
+  height: 34px;
+  padding: 0 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.mgrSelect:focus { border-color: var(--c1); }
+
+/* ── Confirm modal ── */
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirmBox {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirmTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.confirmMsg {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.confirmBtns {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.confirmCancel {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.confirmDelete {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  font-family: 'DM Sans', var(--font-dm), sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.errMsg {
+  font-size: 0.8rem;
+  color: #ef4444;
+  margin-top: -4px;
+}
+
+.muted {
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 8px 0;
+}
