@@ -237,16 +237,22 @@
 .mgrRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 8px;
 }
 
 .mgrName {
   flex: 1;
+  min-width: 0;
   font-size: 0.84rem;
   color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mgrSelect {
+  flex-shrink: 0;
   height: 34px;
   padding: 0 8px;
   border: 1.5px solid var(--border);
@@ -257,7 +263,7 @@
   font-size: 0.8rem;
   outline: none;
   cursor: pointer;
-  min-width: 120px;
+  max-width: 160px;
 }
 
 .mgrSelect:focus { border-color: var(--c1); }

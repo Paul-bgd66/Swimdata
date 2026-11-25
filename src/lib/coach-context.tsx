@@ -30,7 +30,8 @@ export interface CoachContextValue {
   setGroupeActif:     (g: Groupe) => void
   setSousGroupeActif: (g: Groupe | null) => void
   showGroupeSelect:   () => void
-  updateGroupes:      (gs: Groupe[]) => void
+  updateGroupes:         (gs: Groupe[]) => void
+  updateNageurGroupeId:  (id: string, groupeId: string | null) => void
 }
 
 export const CoachContext = createContext<CoachContextValue | null>(null)

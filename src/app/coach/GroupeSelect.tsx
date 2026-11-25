@@ -37,7 +37,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
 }
 
 export default function GroupeSelect() {
-  const { club, coach, nageurs, groupes, colors, updateGroupes, setGroupeActif } = useCoach()
+  const { club, coach, nageurs, groupes, colors, showToast, updateGroupes, updateNageurGroupeId, setGroupeActif } = useCoach()
 
   const [creating,   setCreating]   = useState<CreatingState | false>(false)
   const [newNom,     setNewNom]     = useState('')
@@ -151,13 +151,25 @@ export default function GroupeSelect() {
   }
 
   async function handleNageurGroupe(nageur: Nageur, groupeId: string | null) {
+    const prevGid = nageurGids[nageur.id] ?? null
+    // Optimistic update — context + local state
     setNageurGids(prev => ({ ...prev, [nageur.id]: groupeId }))
-    const token = await getToken()
-    fetch('/api/nageurs', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ id: nageur.id, groupeId }),
-    }).catch(() => {})
+    updateNageurGroupeId(nageur.id, groupeId)
+    try {
+      const token = await getToken()
+      const res = await fetch('/api/nageurs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ id: nageur.id, groupeId }),
+      })
+      const data = await res.json() as { error?: string }
+      if (!res.ok) throw new Error(data.error || 'Erreur ' + res.status)
+    } catch (e) {
+      // Revert both context and local state
+      setNageurGids(prev => ({ ...prev, [nageur.id]: prevGid }))
+      updateNageurGroupeId(nageur.id, prevGid)
+      showToast('Erreur : ' + (e as Error).message)
+    }
   }
 
   async function confirmAction() {

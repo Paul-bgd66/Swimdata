@@ -192,6 +192,10 @@ export default function CoachClient() {
     setGroupes(gs)
   }, [])
 
+  const updateNageurGroupeId = useCallback((id: string, groupeId: string | null) => {
+    setNageurs(prev => prev.map(n => n.id === id ? { ...n, groupe_id: groupeId } : n))
+  }, [])
+
   const showToast = useCallback((msg: string) => {
     setToast(msg)
     if (toastTimer.current) clearTimeout(toastTimer.current)
@@ -225,10 +229,10 @@ export default function CoachClient() {
     club, coach, nageurs, colors, theme, lang, coachMode,
     setCoachMode, setLang, showToast,
     groupes, groupeActif: groupeActifState, sousGroupes, sousGroupeActif, nageursFiltres,
-    setGroupeActif, setSousGroupeActif, showGroupeSelect, updateGroupes,
+    setGroupeActif, setSousGroupeActif, showGroupeSelect, updateGroupes, updateNageurGroupeId,
   }), [club, coach, nageurs, colors, theme, lang, coachMode, showToast, // eslint-disable-line react-hooks/exhaustive-deps
       groupes, groupeActifState, sousGroupes, sousGroupeActif, nageursFiltres,
-      setGroupeActif, showGroupeSelect, updateGroupes])
+      setGroupeActif, showGroupeSelect, updateGroupes, updateNageurGroupeId])
 
   if (status === 'loading') {
     return <div className={styles.loadingScreen}>SWIMDATA…</div>
