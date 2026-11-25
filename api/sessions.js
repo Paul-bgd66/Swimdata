@@ -29,16 +29,18 @@ export default async function handler(req) {
   const url = new URL(req.url);
 
   if (req.method === 'GET') {
-    const clubId = url.searchParams.get('clubId');
-    const coachId = url.searchParams.get('coachId');
+    const clubId   = url.searchParams.get('clubId');
+    const coachId  = url.searchParams.get('coachId');
+    const groupeId = url.searchParams.get('groupeId');
     if (!clubId || !coachId) return json(400, { error: 'clubId and coachId required' });
 
-    const { data, error } = await supabase()
+    let q = supabase()
       .from('sessions')
       .select('*')
       .eq('club_id', clubId)
-      .eq('coach_id', coachId)
-      .order('date', { ascending: false });
+      .eq('coach_id', coachId);
+    if (groupeId) q = q.eq('groupe_id', groupeId);
+    const { data, error } = await q.order('date', { ascending: false });
 
     if (error) {
       console.error('[sessions GET] supabase error', JSON.stringify(error));
@@ -57,15 +59,16 @@ export default async function handler(req) {
     if (!clubId || !coachId || !session) return json(400, { error: 'clubId, coachId, session required' });
 
     const row = {
-      id: session.id,
-      club_id: clubId,
-      coach_id: coachId,
-      name: session.name || '',
-      date: session.date || new Date().toISOString().slice(0, 10),
-      pool: session.pool || '',
-      notes: session.notes || '',
-      rows: session.rows || [],
-      saved_at: session.savedAt || new Date().toISOString(),
+      id:        session.id,
+      club_id:   clubId,
+      coach_id:  coachId,
+      groupe_id: session.groupeId || null,
+      name:      session.name || '',
+      date:      session.date || new Date().toISOString().slice(0, 10),
+      pool:      session.pool || '',
+      notes:     session.notes || '',
+      rows:      session.rows || [],
+      saved_at:  session.savedAt || new Date().toISOString(),
     };
     console.log('[sessions POST] inserting', JSON.stringify(row));
 
@@ -88,12 +91,13 @@ export default async function handler(req) {
     if (!clubId || !coachId || !session?.id) return json(400, { error: 'clubId, coachId, session.id required' });
 
     const patch = {
-      name: session.name || '',
-      date: session.date || new Date().toISOString().slice(0, 10),
-      pool: session.pool || '',
-      notes: session.notes || '',
-      rows: session.rows || [],
-      saved_at: session.savedAt || new Date().toISOString(),
+      groupe_id: session.groupeId || null,
+      name:      session.name || '',
+      date:      session.date || new Date().toISOString().slice(0, 10),
+      pool:      session.pool || '',
+      notes:     session.notes || '',
+      rows:      session.rows || [],
+      saved_at:  session.savedAt || new Date().toISOString(),
     };
     console.log('[sessions PUT] updating id=%s club=%s coach=%s patch=%s', session.id, clubId, coachId, JSON.stringify(patch));
 

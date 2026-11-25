@@ -26,7 +26,7 @@ export interface CoachContextValue {
   groupeActif:        Groupe | null
   sousGroupes:        Groupe[]
   sousGroupeActif:    Groupe | null
-  nagueursFiltres:    Nageur[]
+  nageursFiltres:    Nageur[]
   setGroupeActif:     (g: Groupe) => void
   setSousGroupeActif: (g: Groupe | null) => void
   showGroupeSelect:   () => void

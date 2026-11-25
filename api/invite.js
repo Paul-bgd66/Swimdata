@@ -27,7 +27,7 @@ export default async function handler(req) {
   let body;
   try { body = await req.json(); } catch { return json(400, { error: 'Invalid JSON' }); }
 
-  const { email, role, coachId, clubId, firstName, lastName } = body || {};
+  const { email, role, coachId, clubId, firstName, lastName, groupeId } = body || {};
   if (!email) return json(400, { error: 'Email requis' });
 
   const _role = role === 'coach' ? 'coach' : 'swimmer';
@@ -55,12 +55,13 @@ export default async function handler(req) {
   // Insert dans la table swimmers (uniquement pour le rôle swimmer)
   if (_role === 'swimmer' && userId) {
     const { error: insertErr } = await sb.from('nageurs').insert({
-      id: userId,
-      coach_id: coachId || null,
-      club_id: clubId || null,
-      prenom: firstName || '',
-      nom: lastName || '',
-      email: email,
+      id:        userId,
+      coach_id:  coachId   || null,
+      club_id:   clubId    || null,
+      groupe_id: groupeId  || null,
+      prenom:    firstName || '',
+      nom:       lastName  || '',
+      email:     email,
     });
     if (insertErr) {
       console.error('[invite] swimmers insert error:', insertErr);

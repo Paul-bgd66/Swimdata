@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import { sb } from '@/lib/supabase'
 import styles from './coach.module.css'
 import { CoachContext } from '@/lib/coach-context'
 import type { CoachContextValue, CoachInfo } from '@/lib/coach-context'
@@ -15,10 +15,6 @@ import Poids       from './tabs/Poids'
 import Planning    from './tabs/Planning'
 import GroupeSelect from './GroupeSelect'
 import SubGroupeFilter from './components/SubGroupeFilter'
-
-const SB_URL  = 'https://girspxdolhsuvmkkgngb.supabase.co'
-const SB_ANON = 'sb_publishable_0g2OLZxdskIL3tSUllA5vQ_2WNKpFLv'
-const sb = createClient(SB_URL, SB_ANON)
 
 type Tab = 'seance' | 'dash' | 'hist' | 'planning' | 'video' | 'hrv' | 'poids' | 'perf' | 'swimmers' | 'coachs' | 'settings'
 
@@ -129,11 +125,15 @@ export default function CoachClient() {
       // Use coaches-table role (authoritative) over user_metadata.role
       if (coachData.role) setCoach(prev => prev ? { ...prev, role: coachData.role! } : prev)
 
+      const token = session.access_token
+
       // Parallel: club data + nageurs + groupes
       const [clubRes, nageursRes, groupesRes] = await Promise.all([
         fetch('/api/clubs?id=' + encodeURIComponent(clubId)),
         fetch('/api/nageurs?coachId=' + encodeURIComponent(user.id) + '&clubId=' + encodeURIComponent(clubId)),
-        fetch('/api/groupes?coachId=' + encodeURIComponent(user.id) + '&clubId=' + encodeURIComponent(clubId)),
+        fetch('/api/groupes?clubId=' + encodeURIComponent(clubId), {
+          headers: { Authorization: 'Bearer ' + token },
+        }),
       ])
 
       if (!clubRes.ok) throw new Error('Club introuvable (statut ' + clubRes.status + ')')
@@ -172,14 +172,16 @@ export default function CoachClient() {
     setGroupeActifState(g)
     setSousGroupeActif(null)
     setStatus('ready')
-    if (coach) {
+    ;(async () => {
+      const { data: { session: s } } = await sb.auth.getSession()
+      if (!s) return
       fetch('/api/coaches', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coachId: coach.id, dernierGroupeId: g.id }),
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token },
+        body: JSON.stringify({ dernierGroupeId: g.id }),
       }).catch(() => {})
-    }
-  }, [coach]) // eslint-disable-line react-hooks/exhaustive-deps
+    })()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const showGroupeSelect = useCallback(() => {
     setStatus('group_select')
@@ -212,7 +214,7 @@ export default function CoachClient() {
     [groupes, groupeActifState]
   )
 
-  const nagueursFiltres = useMemo(() => {
+  const nageursFiltres = useMemo(() => {
     if (!groupeActifState) return nageurs
     if (sousGroupeActif) return nageurs.filter(n => n.groupe_id === sousGroupeActif.id)
     const ids = new Set([groupeActifState.id, ...sousGroupes.map(sg => sg.id)])
@@ -222,10 +224,10 @@ export default function CoachClient() {
   const ctxValue = useMemo<CoachContextValue>(() => ({
     club, coach, nageurs, colors, theme, lang, coachMode,
     setCoachMode, setLang, showToast,
-    groupes, groupeActif: groupeActifState, sousGroupes, sousGroupeActif, nagueursFiltres,
+    groupes, groupeActif: groupeActifState, sousGroupes, sousGroupeActif, nageursFiltres,
     setGroupeActif, setSousGroupeActif, showGroupeSelect, updateGroupes,
   }), [club, coach, nageurs, colors, theme, lang, coachMode, showToast, // eslint-disable-line react-hooks/exhaustive-deps
-      groupes, groupeActifState, sousGroupes, sousGroupeActif, nagueursFiltres,
+      groupes, groupeActifState, sousGroupes, sousGroupeActif, nageursFiltres,
       setGroupeActif, showGroupeSelect, updateGroupes])
 
   if (status === 'loading') {

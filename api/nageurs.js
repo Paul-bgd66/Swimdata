@@ -9,7 +9,7 @@ export const config = { runtime: 'edge' };
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, PATCH, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 function json(status, body) {
@@ -26,13 +26,23 @@ export default async function handler(req) {
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
   if (req.method === 'PATCH') {
+    const authHeader = (req.headers.get('Authorization') || '').trim();
+    if (!authHeader.startsWith('Bearer ')) return json(401, { error: 'Auth required' });
+    const { data: { user }, error: authErr } = await sb.auth.getUser(authHeader.slice(7));
+    if (authErr || !user) return json(401, { error: 'Token invalide' });
+    const coachId = user.id;
+
     let body;
     try { body = await req.json(); } catch { return json(400, { error: 'Invalid JSON' }); }
     const { id, groupeId } = body;
     if (!id) return json(400, { error: 'id requis' });
-    const { error } = await sb.from('nageurs')
-      .update({ groupe_id: groupeId || null })
-      .eq('id', id);
+
+    const { data: coachRow } = await sb.from('coaches').select('club_id').eq('id', coachId).maybeSingle();
+    if (!coachRow) return json(403, { error: 'Coach introuvable.' });
+    const { data: nagRow } = await sb.from('nageurs').select('club_id').eq('id', id).maybeSingle();
+    if (!nagRow || nagRow.club_id !== coachRow.club_id) return json(403, { error: 'Non autorisé.' });
+
+    const { error } = await sb.from('nageurs').update({ groupe_id: groupeId || null }).eq('id', id);
     if (error) return json(500, { error: error.message });
     return json(200, { ok: true });
   }

@@ -17,16 +17,21 @@ export default function SubGroupeFilter() {
       >
         Tous
       </button>
-      {sousGroupes.map(sg => (
-        <button
-          key={sg.id}
-          className={`${styles.chip} ${sousGroupeActif?.id === sg.id ? styles.chipActive : ''}`}
-          style={sousGroupeActif?.id === sg.id ? { background: colors.c1 } : {}}
-          onClick={() => setSousGroupeActif(sg)}
-        >
-          {sg.nom}
-        </button>
-      ))}
+      {sousGroupes.map(sg => {
+        const color = sg.couleur || colors.c1
+        return (
+          <button
+            key={sg.id}
+            className={`${styles.chip} ${sousGroupeActif?.id === sg.id ? styles.chipActive : ''}`}
+            style={sousGroupeActif?.id === sg.id
+              ? { background: color, borderColor: color }
+              : { borderColor: color, color }}
+            onClick={() => setSousGroupeActif(sg)}
+          >
+            {sg.nom}
+          </button>
+        )
+      })}
     </div>
   )
 }

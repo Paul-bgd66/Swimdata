@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 function json(status, body) {
@@ -74,17 +74,21 @@ export default async function handler(req) {
     return json(200, safe);
   }
 
-  // ── PATCH { coachId, dernierGroupeId } ──────────────────────────────────
+  // ── PATCH { dernierGroupeId } — coachId déduit du JWT ───────────────────
   if (req.method === 'PATCH') {
+    const authHeader = (req.headers.get('Authorization') || '').trim();
+    if (!authHeader.startsWith('Bearer ')) return json(401, { error: 'Auth required' });
+    const { data: { user }, error: authErr } = await supabase().auth.getUser(authHeader.slice(7));
+    if (authErr || !user) return json(401, { error: 'Token invalide' });
+
     let body;
     try { body = await req.json(); } catch { return json(400, { error: 'Invalid JSON' }); }
-    const { coachId, dernierGroupeId } = body;
-    if (!coachId) return json(400, { error: 'coachId required' });
+    const { dernierGroupeId } = body;
 
     const { error } = await supabase()
       .from('coaches')
       .update({ dernier_groupe_id: dernierGroupeId || null })
-      .eq('id', coachId);
+      .eq('id', user.id);
 
     if (error) return json(500, { error: error.message });
     return json(200, { ok: true });

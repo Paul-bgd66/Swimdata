@@ -6,13 +6,20 @@ import type { Coach } from '@/lib/types'
 import styles from './coachs.module.css'
 
 export default function Coachs() {
-  const { club, coach, colors } = useCoach()
+  const { club, coach, colors, groupeActif, sousGroupeActif } = useCoach()
 
   const [coaches, setCoaches]     = useState<Coach[]>([])
   const [loading, setLoading]     = useState(true)
   const [inviteEmail, setInvite]  = useState('')
   const [sending, setSending]     = useState(false)
   const [feedback, setFeedback]   = useState<{ ok: boolean; msg: string } | null>(null)
+
+  // Swimmer invite
+  const [swimFirst,  setSwimFirst]  = useState('')
+  const [swimLast,   setSwimLast]   = useState('')
+  const [swimEmail,  setSwimEmail]  = useState('')
+  const [swimSend,   setSwimSend]   = useState(false)
+  const [swimFb,     setSwimFb]     = useState<{ ok: boolean; msg: string } | null>(null)
 
   const isManager = coach?.role === 'manager'
 
@@ -26,6 +33,34 @@ export default function Coachs() {
       .catch(() => setCoaches([]))
       .finally(() => setLoading(false))
   }, [club, coach?.id])
+
+  async function handleInviteSwimmer(e: React.FormEvent) {
+    e.preventDefault()
+    if (!swimEmail.trim() || !club || !coach) return
+    setSwimSend(true)
+    setSwimFb(null)
+    try {
+      const groupeId = sousGroupeActif?.id ?? groupeActif?.id ?? undefined
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: swimEmail.trim(), role: 'swimmer',
+          coachId: coach.id, clubId: club.id,
+          firstName: swimFirst.trim(), lastName: swimLast.trim(),
+          groupeId,
+        }),
+      })
+      const json = await res.json() as { error?: string }
+      if (!res.ok) throw new Error(json.error || 'Erreur ' + res.status)
+      setSwimFb({ ok: true, msg: `Invitation envoyée à ${swimEmail.trim()}` })
+      setSwimFirst(''); setSwimLast(''); setSwimEmail('')
+    } catch (err) {
+      setSwimFb({ ok: false, msg: (err as Error).message })
+    } finally {
+      setSwimSend(false)
+    }
+  }
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault()
@@ -90,7 +125,34 @@ export default function Coachs() {
         </ul>
       )}
 
-      {/* ── Invite form (manager only) ── */}
+      {/* ── Invite swimmer ── */}
+      <form className={styles.form} onSubmit={handleInviteSwimmer}>
+        <p className={styles.formTitle}>
+          Inviter un nageur
+          {(sousGroupeActif ?? groupeActif) && (
+            <span style={{ fontWeight: 400, fontSize: '0.78rem', marginLeft: 6, color: 'var(--muted)' }}>
+              → {sousGroupeActif?.nom ?? groupeActif?.nom}
+            </span>
+          )}
+        </p>
+        <div className={styles.row}>
+          <input className={styles.input} type="text" placeholder="Prénom" value={swimFirst}
+            onChange={e => setSwimFirst(e.target.value)} disabled={swimSend} />
+          <input className={styles.input} type="text" placeholder="Nom" value={swimLast}
+            onChange={e => setSwimLast(e.target.value)} disabled={swimSend} />
+        </div>
+        <div className={styles.row}>
+          <input className={styles.input} type="email" placeholder="Adresse e-mail" value={swimEmail}
+            onChange={e => setSwimEmail(e.target.value)} required disabled={swimSend} />
+          <button className={styles.btn} type="submit"
+            disabled={swimSend || !swimEmail.trim()} style={{ background: colors.c1 }}>
+            {swimSend ? '…' : 'Inviter'}
+          </button>
+        </div>
+        {swimFb && <p className={swimFb.ok ? styles.ok : styles.err}>{swimFb.msg}</p>}
+      </form>
+
+      {/* ── Invite coach (manager only) ── */}
       {isManager && (
         <form className={styles.form} onSubmit={handleInvite}>
           <p className={styles.formTitle}>Inviter un coach</p>

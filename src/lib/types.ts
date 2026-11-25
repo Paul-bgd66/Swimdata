@@ -39,6 +39,7 @@ export interface Groupe {
   coachId: string
   parentId: string | null
   nom: string
+  couleur?: string | null
   createdAt?: string
 }
 
