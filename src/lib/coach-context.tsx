@@ -34,6 +34,7 @@ export interface CoachContextValue {
   updateNageurGroupeId:  (id: string, groupeId: string | null) => void
   updateNageur:          (id: string, updates: Partial<Pick<Nageur, 'prenom' | 'nom'>>) => void
   removeNageur:          (id: string) => void
+  addNageur:             (n: Nageur) => void
 }
 
 export const CoachContext = createContext<CoachContextValue | null>(null)

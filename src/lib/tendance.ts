@@ -1,8 +1,8 @@
 export interface EtatJour {
-  date:   string
-  rmssd?: number | null
-  note?:  number | null
-  fc?:    number | null
+  date:      string
+  sommeilH?: number | null  // heures de sommeil (wearable)
+  recup?:    number | null  // récupération 0–100 (wearable)
+  effort?:   number | null  // charge d'effort 0–100 (wearable)
 }
 
 export type Couleur = 'rouge' | 'orange' | 'vert'
@@ -14,8 +14,7 @@ export interface SerieResult {
 }
 
 function normalize(e: EtatJour): number | null {
-  if (e.note != null) return Math.max(0, Math.min(100, e.note))
-  if (e.rmssd != null) return Math.round(Math.min(100, Math.max(0, (e.rmssd - 20) / 50 * 100)))
+  if (e.recup != null) return Math.max(0, Math.min(100, e.recup))
   return null
 }
 

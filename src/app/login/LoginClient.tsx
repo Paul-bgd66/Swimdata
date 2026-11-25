@@ -54,11 +54,28 @@ export default function LoginClient() {
     if (code) {
       const ft: FlowType = searchParams.get('type') === 'recovery' ? 'recovery' : 'invite'
       history.replaceState(null, '', window.location.pathname)
-      sb.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+      sb.auth.exchangeCodeForSession(code).then(async ({ data, error }) => {
         if (error) {
           setState('login')
           setLoginMsg('Lien invalide ou expiré.')
           return
+        }
+        // Block disabled swimmers
+        if (data?.user?.user_metadata?.role === 'swimmer' && data?.session?.access_token) {
+          try {
+            const r = await fetch('/api/nageurs?self=1', {
+              headers: { Authorization: 'Bearer ' + data.session.access_token },
+            })
+            if (r.ok) {
+              const nd = await r.json() as { active?: boolean }
+              if (nd.active === false) {
+                await sb.auth.signOut()
+                setState('login')
+                setLoginMsg('Ce compte a été désactivé par votre coach.')
+                return
+              }
+            }
+          } catch { /* non-fatal */ }
         }
         setPkceUser(data?.user ?? null)
         setFlowType(ft)
@@ -81,11 +98,28 @@ export default function LoginClient() {
     sb.auth.setSession({
       access_token:  params.access_token,
       refresh_token: params.refresh_token ?? '',
-    }).then(({ data, error }) => {
+    }).then(async ({ data, error }) => {
       if (error) {
         setState('login')
         setLoginMsg('Lien invalide ou expiré.')
         return
+      }
+      // Block disabled swimmers
+      if (data?.user?.user_metadata?.role === 'swimmer' && data?.session?.access_token) {
+        try {
+          const r = await fetch('/api/nageurs?self=1', {
+            headers: { Authorization: 'Bearer ' + data.session.access_token },
+          })
+          if (r.ok) {
+            const nd = await r.json() as { active?: boolean }
+            if (nd.active === false) {
+              await sb.auth.signOut()
+              setState('login')
+              setLoginMsg('Ce compte a été désactivé par votre coach.')
+              return
+            }
+          }
+        } catch { /* non-fatal */ }
       }
       setPkceUser(data?.user ?? null)
       setFlowType(t === 'recovery' ? 'recovery' : 'invite')
@@ -117,6 +151,22 @@ export default function LoginClient() {
     setLoginLoading(false)
     if (error) { setLoginMsg(error.message); return }
     const role = data?.user?.user_metadata?.role
+    if (role === 'swimmer' && data.session?.access_token) {
+      try {
+        const r = await fetch('/api/nageurs?self=1', {
+          headers: { Authorization: 'Bearer ' + data.session.access_token },
+        })
+        if (r.ok) {
+          const nd = await r.json() as { active?: boolean }
+          if (nd.active === false) {
+            await sb.auth.signOut()
+            setLoginMsg('Ce compte a été désactivé par votre coach.')
+            setLoginLoading(false)
+            return
+          }
+        }
+      } catch { /* non-fatal */ }
+    }
     router.push(role === 'swimmer' ? '/swimmer' : '/index.html')
   }
 

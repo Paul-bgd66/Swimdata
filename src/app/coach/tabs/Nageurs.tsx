@@ -1,22 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useCoach } from '@/lib/coach-context'
 import { getToken } from '@/lib/supabase'
 import type { Nageur, HrvEntry, PoidsEntry, Perf, Groupe } from '@/lib/types'
 import Anneau from '@/components/ui/Anneau'
 import Tiroir from '@/components/ui/Tiroir'
-import { serieRecup } from '@/lib/tendance'
+import Carte from '@/components/ui/Carte'
+import Bouton from '@/components/ui/Bouton'
+import Modale from '@/components/ui/Modale'
 import styles from './nageurs.module.css'
 
 interface HrvRow  { nageur_nom: string; historique: HrvEntry[] }
 interface PoidsRow { prenom: string; nom: string; entries: PoidsEntry[] }
 interface PerfsRow { nageur_nom: string; performances: Perf[] }
 
-const COULEUR_HEX: Record<string, string> = {
-  rouge:  '#EF4444',
-  orange: '#F59E0B',
-  vert:   '#22C55E',
+function formatFr(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr.slice(0, 10) + 'T00:00:00')
+  if (isNaN(d.getTime())) return dateStr.slice(0, 10)
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10)
 }
 
 function initials(n: Nageur): string {
@@ -31,7 +38,7 @@ function avatarColor(n: Nageur, groupes: Groupe[], c1: string): string {
 export default function Nageurs() {
   const {
     club, coach, nageursFiltres, groupes, groupeActif, sousGroupeActif,
-    colors, showToast, updateNageurGroupeId, updateNageur, removeNageur,
+    colors, showToast, updateNageurGroupeId, updateNageur, removeNageur, addNageur,
   } = useCoach()
 
   const racine    = groupes.filter(g => !g.parentId)
@@ -40,13 +47,16 @@ export default function Nageurs() {
     return acc
   }, {})
 
+  const dateInputRef = useRef<HTMLInputElement>(null)
+
   // ── Drawer ──
-  const [selected,    setSelected]    = useState<Nageur | null>(null)
-  const [tiroirOpen,  setTiroirOpen]  = useState(false)
-  const [loadingData, setLoadingData] = useState(false)
-  const [hrv,         setHrv]         = useState<HrvEntry[] | null>(null)
-  const [poids,       setPoids]       = useState<PoidsEntry[] | null>(null)
-  const [perfs,       setPerfs]       = useState<Perf[] | null>(null)
+  const [selected,     setSelected]     = useState<Nageur | null>(null)
+  const [tiroirOpen,   setTiroirOpen]   = useState(false)
+  const [loadingData,  setLoadingData]  = useState(false)
+  const [hrv,          setHrv]          = useState<HrvEntry[] | null>(null)
+  const [poids,        setPoids]        = useState<PoidsEntry[] | null>(null)
+  const [perfs,        setPerfs]        = useState<Perf[] | null>(null)
+  const [selectedDate, setSelectedDate] = useState(todayISO())
 
   // ── Collapsible sections ──
   const [openHrv,   setOpenHrv]   = useState(false)
@@ -74,6 +84,7 @@ export default function Nageurs() {
   function openDrawer(n: Nageur) {
     setSelected(n)
     setTiroirOpen(true)
+    setSelectedDate(todayISO())
     setHrv(null); setPoids(null); setPerfs(null)
     setOpenHrv(false); setOpenPoids(false); setOpenPerfs(false)
     setEditOpen(false); setEditErr(''); setConfirmDel(false)
@@ -84,6 +95,19 @@ export default function Nageurs() {
   function closeDrawer() {
     setTiroirOpen(false)
     setTimeout(() => setSelected(null), 350)
+  }
+
+  function prevDay() {
+    const d = new Date(selectedDate + 'T00:00:00')
+    d.setDate(d.getDate() - 1)
+    setSelectedDate(d.toISOString().slice(0, 10))
+  }
+
+  function nextDay() {
+    const d = new Date(selectedDate + 'T00:00:00')
+    d.setDate(d.getDate() + 1)
+    if (d.toISOString().slice(0, 10) > todayISO()) return
+    setSelectedDate(d.toISOString().slice(0, 10))
   }
 
   async function fetchData(n: Nageur) {
@@ -204,8 +228,18 @@ export default function Nageurs() {
           groupeId,
         }),
       })
-      const json = await res.json() as { error?: string }
+      const json = await res.json() as { error?: string; userId?: string }
       if (!res.ok) throw new Error(json.error || 'Erreur ' + res.status)
+      if (json.userId) {
+        addNageur({
+          id:         json.userId,
+          prenom:     swimFirst.trim(),
+          nom:        swimLast.trim(),
+          email:      swimEmail.trim(),
+          groupe_id:  groupeId || null,
+          created_at: new Date().toISOString(),
+        })
+      }
       setSwimFb({ ok: true, msg: `Invitation envoyée à ${swimEmail.trim()}` })
       setSwimFirst(''); setSwimLast(''); setSwimEmail('')
     } catch (err) {
@@ -215,23 +249,20 @@ export default function Nageurs() {
     }
   }
 
-  // ── Récup ring for drawer ──
-  const recupResult  = hrv ? serieRecup(hrv.map(h => ({ date: h.date, rmssd: h.rmssd, note: h.note }))) : null
-  const recupCouleur = recupResult?.couleur ? COULEUR_HEX[recupResult.couleur] : undefined
-  const recupValeur  = recupResult?.derniere ?? null
+  // ── Date-filtered data for drawer ──
+  const hrvDay   = hrv?.find(h => h.date.slice(0, 10) === selectedDate)   ?? null
+  const poidsDay = poids?.find(p => p.date.slice(0, 10) === selectedDate) ?? null
+  const perfsDay = perfs?.filter(p => p.date?.slice(0, 10) === selectedDate) ?? []
 
-  // 7-day average récup
-  const hrv7j   = hrv ? [...hrv].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7) : []
-  const avg7j   = hrv7j.length
-    ? Math.round(hrv7j.reduce((s, h) => {
-        const v = h.note != null
-          ? h.note
-          : h.rmssd != null
-          ? Math.round(Math.min(100, Math.max(0, (h.rmssd - 20) / 50 * 100)))
-          : 0
-        return s + v
-      }, 0) / hrv7j.length)
-    : null
+  // Latest date with any data (fallback link)
+  const latestDataDate = (() => {
+    const dates: string[] = []
+    if (hrv?.length)   dates.push([...hrv].sort((a, b)   => b.date.localeCompare(a.date))[0].date.slice(0, 10))
+    if (poids?.length) dates.push([...poids].sort((a, b) => b.date.localeCompare(a.date))[0].date.slice(0, 10))
+    return dates.sort().reverse()[0] ?? null
+  })()
+
+  const noDataToday = hrv !== null && poids !== null && !hrvDay && !poidsDay && perfsDay.length === 0
 
   return (
     <div className={styles.root}>
@@ -243,7 +274,7 @@ export default function Nageurs() {
       ) : (
         <div className={styles.grid}>
           {nageursFiltres.map(n => (
-            <div key={n.id} className={styles.card} onClick={() => openDrawer(n)}>
+            <Carte key={n.id} onClick={() => openDrawer(n)} className={styles.swimCard}>
               <div
                 className={styles.cardAvatar}
                 style={{ background: avatarColor(n, groupes, colors.c1) }}
@@ -256,7 +287,7 @@ export default function Nageurs() {
                 <Anneau valeur={null} label="Récup"   taille="sm" />
                 <Anneau valeur={null} label="Effort"  taille="sm" />
               </div>
-            </div>
+            </Carte>
           ))}
         </div>
       )}
@@ -280,10 +311,10 @@ export default function Nageurs() {
         <div className={styles.inviteRow}>
           <input className={styles.input} type="email" placeholder="Adresse e-mail" value={swimEmail}
             onChange={e => setSwimEmail(e.target.value)} required disabled={swimSend} />
-          <button className={styles.inviteBtn} type="submit"
-            disabled={swimSend || !swimEmail.trim()} style={{ background: colors.c1 }}>
+          <Bouton variante="primary" couleur={colors.c1} type="submit"
+            disabled={swimSend || !swimEmail.trim()}>
             {swimSend ? '…' : 'Inviter'}
-          </button>
+          </Bouton>
         </div>
         {swimFb && <p className={swimFb.ok ? styles.ok : styles.err}>{swimFb.msg}</p>}
       </form>
@@ -334,32 +365,72 @@ export default function Nageurs() {
               <button className={styles.closeBtn} onClick={closeDrawer}>✕</button>
             </div>
 
-            {/* Rings */}
-            <div className={styles.drawerRings}>
-              {loadingData ? (
-                <span className={styles.loadingText}>Chargement…</span>
-              ) : (
-                <>
-                  <div className={styles.ringCol}>
-                    <Anneau valeur={null} label="Sommeil" taille="lg" />
-                  </div>
-                  <div className={styles.ringCol}>
-                    <Anneau
-                      valeur={recupValeur}
-                      couleur={recupCouleur}
-                      label="Récup"
-                      taille="lg"
-                    />
-                    {avg7j != null && (
-                      <span className={styles.ringAvg}>moy. 7j : {avg7j}</span>
-                    )}
-                  </div>
-                  <div className={styles.ringCol}>
-                    <Anneau valeur={null} label="Effort" taille="lg" />
-                  </div>
-                </>
+            {/* Date selector */}
+            <div className={styles.dateSel}>
+              <button className={styles.dateArrow} onClick={prevDay} title="Jour précédent">←</button>
+              <button
+                className={styles.dateLabel}
+                onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
+                title="Choisir une date"
+              >
+                {formatFr(selectedDate)}
+              </button>
+              <button className={styles.dateArrow} onClick={nextDay} disabled={selectedDate >= todayISO()} title="Jour suivant">→</button>
+              <input
+                ref={dateInputRef}
+                type="date"
+                className={styles.dateHiddenInput}
+                value={selectedDate}
+                max={todayISO()}
+                onChange={e => { if (e.target.value) setSelectedDate(e.target.value) }}
+              />
+              {selectedDate !== todayISO() && (
+                <button className={styles.dateTodayBtn} onClick={() => setSelectedDate(todayISO())}>
+                  Aujourd&apos;hui
+                </button>
               )}
             </div>
+
+            {/* Rings */}
+            <div className={styles.drawerRings}>
+              <div className={styles.ringCol}>
+                <Anneau valeur={null} label="Sommeil" taille="lg" />
+              </div>
+              <div className={styles.ringCol}>
+                <Anneau valeur={null} label="Récup" taille="lg" />
+              </div>
+              <div className={styles.ringCol}>
+                <Anneau valeur={null} label="Effort" taille="lg" />
+              </div>
+            </div>
+
+            {/* 7-day averages */}
+            <div className={styles.avg7Row}>
+              <div className={styles.avg7Item}>
+                <span className={styles.avg7Label}>Sommeil 7j</span>
+                <span className={styles.avg7Num}>—</span>
+              </div>
+              <div className={styles.avg7Item}>
+                <span className={styles.avg7Label}>Récup 7j</span>
+                <span className={styles.avg7Num}>—</span>
+              </div>
+              <div className={styles.avg7Item}>
+                <span className={styles.avg7Label}>Effort 7j</span>
+                <span className={styles.avg7Num}>—</span>
+              </div>
+            </div>
+
+            {/* No data notice */}
+            {noDataToday && (
+              <div className={styles.noDataBar}>
+                <span>Aucune mesure ce jour</span>
+                {latestDataDate && (
+                  <button className={styles.noDataLink} onClick={() => setSelectedDate(latestDataDate)}>
+                    Dernière mesure : {formatFr(latestDataDate)}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Group selector */}
             <div className={styles.drawerSection}>
@@ -383,24 +454,21 @@ export default function Nageurs() {
             <div className={styles.collapsible}>
               <button className={styles.collHdr} onClick={() => setOpenHrv(v => !v)}>
                 <span>HRV</span>
-                {hrv && hrv.length > 0 && <span className={styles.badge}>{hrv.length}</span>}
+                {hrvDay && <span className={styles.badge}>1</span>}
                 <span className={styles.chevron}>{openHrv ? '▲' : '▼'}</span>
               </button>
               {openHrv && (
                 <div className={styles.collBody}>
-                  {!hrv || hrv.length === 0 ? (
-                    <p className={styles.muted}>Aucune donnée</p>
+                  {!hrvDay ? (
+                    <p className={styles.muted}>Aucune entrée ce jour</p>
                   ) : (
                     <table className={styles.table}>
-                      <thead><tr><th>Date</th><th>RMSSD</th><th>Note</th></tr></thead>
+                      <thead><tr><th>RMSSD</th><th>Note</th></tr></thead>
                       <tbody>
-                        {[...hrv].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7).map((h, i) => (
-                          <tr key={i}>
-                            <td>{h.date.slice(0, 10)}</td>
-                            <td>{h.rmssd ?? '—'}</td>
-                            <td>{h.note  ?? '—'}</td>
-                          </tr>
-                        ))}
+                        <tr>
+                          <td>{hrvDay.rmssd ?? '—'}</td>
+                          <td>{hrvDay.note  ?? '—'}</td>
+                        </tr>
                       </tbody>
                     </table>
                   )}
@@ -412,22 +480,15 @@ export default function Nageurs() {
             <div className={styles.collapsible}>
               <button className={styles.collHdr} onClick={() => setOpenPoids(v => !v)}>
                 <span>Poids</span>
-                {poids && poids.length > 0 && <span className={styles.badge}>{poids.length}</span>}
+                {poidsDay && <span className={styles.badge}>1</span>}
                 <span className={styles.chevron}>{openPoids ? '▲' : '▼'}</span>
               </button>
               {openPoids && (
                 <div className={styles.collBody}>
-                  {!poids || poids.length === 0 ? (
-                    <p className={styles.muted}>Aucune donnée</p>
+                  {!poidsDay ? (
+                    <p className={styles.muted}>Aucune entrée ce jour</p>
                   ) : (
-                    <ul className={styles.poidsLst}>
-                      {[...poids].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7).map((p, i) => (
-                        <li key={i} className={styles.poidsRow}>
-                          <span>{p.date.slice(0, 10)}</span>
-                          <span className={styles.poidsVal}>{p.weight} kg</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <p className={styles.poidsVal}>{poidsDay.weight} kg</p>
                   )}
                 </div>
               )}
@@ -437,20 +498,19 @@ export default function Nageurs() {
             <div className={styles.collapsible}>
               <button className={styles.collHdr} onClick={() => setOpenPerfs(v => !v)}>
                 <span>Performances</span>
-                {perfs && perfs.length > 0 && <span className={styles.badge}>{perfs.length}</span>}
+                {perfsDay.length > 0 && <span className={styles.badge}>{perfsDay.length}</span>}
                 <span className={styles.chevron}>{openPerfs ? '▲' : '▼'}</span>
               </button>
               {openPerfs && (
                 <div className={styles.collBody}>
-                  {!perfs || perfs.length === 0 ? (
-                    <p className={styles.muted}>Aucune donnée</p>
+                  {perfsDay.length === 0 ? (
+                    <p className={styles.muted}>Aucune performance ce jour</p>
                   ) : (
                     <ul className={styles.perfsList}>
-                      {perfs.slice(0, 10).map((p, i) => (
+                      {perfsDay.map((p, i) => (
                         <li key={i} className={styles.perfRow}>
                           <span className={styles.perfEvent}>{p.distance}m {p.nage} ({p.bassin}m)</span>
                           <span className={styles.perfTime}>{p.temps}</span>
-                          <span className={styles.perfDate}>{p.date?.slice(0, 10)}</span>
                         </li>
                       ))}
                     </ul>
@@ -461,29 +521,28 @@ export default function Nageurs() {
 
             {/* Delete zone */}
             <div className={styles.deleteZone}>
-              {confirmDel ? (
-                <div className={styles.confirmBar}>
-                  <p className={styles.confirmMsg}>
-                    Supprimer {selected.prenom} {selected.nom} définitivement ?
-                  </p>
-                  <div className={styles.confirmBtns}>
-                    <button className={styles.confirmCancel} onClick={() => setConfirmDel(false)}>
-                      Annuler
-                    </button>
-                    <button className={styles.confirmDelete} onClick={handleDelete} disabled={deleting}>
-                      {deleting ? '…' : 'Supprimer'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button className={styles.deleteBtn} onClick={() => setConfirmDel(true)}>
-                  Supprimer ce nageur
-                </button>
-              )}
+              <Bouton variante="danger" onClick={() => setConfirmDel(true)} style={{ width: '100%' }}>
+                Supprimer ce nageur
+              </Bouton>
             </div>
           </div>
         )}
       </Tiroir>
+
+      {/* ── Delete modal ── */}
+      <Modale
+        open={confirmDel}
+        onClose={() => setConfirmDel(false)}
+        title={`Supprimer ${selected?.prenom ?? ''} ${selected?.nom ?? ''} ?`}
+      >
+        <p className={styles.modalMsg}>Cette action est irréversible.</p>
+        <div className={styles.modalBtns}>
+          <Bouton variante="outline" onClick={() => setConfirmDel(false)}>Annuler</Bouton>
+          <Bouton variante="danger" onClick={handleDelete} disabled={deleting}>
+            {deleting ? '…' : 'Supprimer'}
+          </Bouton>
+        </div>
+      </Modale>
     </div>
   )
 }

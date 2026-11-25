@@ -74,6 +74,16 @@ export default async function handler(req) {
 
   if (req.method !== 'GET') return json(405, { error: 'Method not allowed' });
 
+  // ?self=1 — returns active status for the authenticated user (used by login/swimmer checks)
+  if (url.searchParams.get('self') === '1') {
+    const authHeader = (req.headers.get('Authorization') || '').trim();
+    if (!authHeader.startsWith('Bearer ')) return json(401, { error: 'Auth required' });
+    const { data: { user }, error: authErr } = await sb.auth.getUser(authHeader.slice(7));
+    if (authErr || !user) return json(401, { error: 'Token invalide' });
+    const { data } = await sb.from('nageurs').select('active').eq('id', user.id).maybeSingle();
+    return json(200, { active: data?.active ?? true });
+  }
+
   const coachId = url.searchParams.get('coachId');
   const clubId = url.searchParams.get('clubId');
 

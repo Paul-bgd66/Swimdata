@@ -89,7 +89,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 export default function SwimmerClient() {
   const router = useRouter()
 
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'disabled'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('perf')
   const [swimmerNom, setSwimmerNom] = useState('')
@@ -122,6 +122,21 @@ export default function SwimmerClient() {
       setEmail(user.email ?? '')
       const m = (user.user_metadata ?? {}) as SwimmerMeta
       if (m.role !== 'swimmer') { router.push('/index.html'); return }
+
+      // Check if account was disabled by coach
+      try {
+        const r = await fetch('/api/nageurs?self=1', {
+          headers: { Authorization: 'Bearer ' + session.access_token },
+        })
+        if (r.ok) {
+          const nd = await r.json() as { active?: boolean }
+          if (nd.active === false) {
+            await sb.auth.signOut()
+            setStatus('disabled')
+            return
+          }
+        }
+      } catch { /* non-fatal — don't block on network error */ }
 
       const nom =
         ((m.firstName ?? '') + ' ' + (m.lastName ?? '')).trim() ||
@@ -258,6 +273,15 @@ export default function SwimmerClient() {
 
   if (status === 'loading') {
     return <div className={styles.loadingScreen}>SWIMDATA…</div>
+  }
+
+  if (status === 'disabled') {
+    return (
+      <div className={styles.loadingScreen} style={{ flexDirection: 'column', gap: 12 }}>
+        <span style={{ fontSize: '1.5rem' }}>🔒</span>
+        <span>Ce compte a été désactivé par votre coach.</span>
+      </div>
+    )
   }
 
   if (status === 'error') {
