@@ -9,22 +9,13 @@ import Tiroir from '@/components/ui/Tiroir'
 import Carte from '@/components/ui/Carte'
 import Bouton from '@/components/ui/Bouton'
 import Modale from '@/components/ui/Modale'
+import MiniGraphe from '@/components/ui/MiniGraphe'
+import { todayLocal, addDays, formatFr } from '@/lib/dates'
 import styles from './nageurs.module.css'
 
 interface HrvRow  { nageur_nom: string; historique: HrvEntry[] }
 interface PoidsRow { prenom: string; nom: string; entries: PoidsEntry[] }
 interface PerfsRow { nageur_nom: string; performances: Perf[] }
-
-function formatFr(dateStr: string | null | undefined): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr.slice(0, 10) + 'T00:00:00')
-  if (isNaN(d.getTime())) return dateStr.slice(0, 10)
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
 
 function initials(n: Nageur): string {
   return ((n.prenom[0] || '') + (n.nom[0] || '')).toUpperCase()
@@ -33,6 +24,47 @@ function initials(n: Nageur): string {
 function avatarColor(n: Nageur, groupes: Groupe[], c1: string): string {
   const g = groupes.find(x => x.id === n.groupe_id)
   return g?.couleur || c1
+}
+
+function eventKey(p: Perf): string   { return `${p.distance}-${p.nage}-${p.bassin}` }
+function eventLabel(p: Perf): string { return `${p.distance}m ${p.nage} (${p.bassin}m)` }
+
+function timeToSec(t: string): number {
+  if (!t) return 9999
+  const parts = t.split(':')
+  return parts.length === 2 ? parseInt(parts[0]) * 60 + parseFloat(parts[1]) : parseFloat(t)
+}
+
+function secsToLabel(s: number): string {
+  const mins = Math.floor(s / 60)
+  const rem  = (s % 60).toFixed(2).padStart(5, '0')
+  return mins > 0 ? `${mins}:${rem}` : rem
+}
+
+function bestPerf(ps: Perf[]): Perf | null {
+  return ps.reduce<Perf | null>((best, p) => {
+    if (!p.temps) return best
+    return !best || timeToSec(p.temps) < timeToSec(best.temps) ? p : best
+  }, null)
+}
+
+function lastPerf(ps: Perf[]): Perf | null {
+  return ps.reduce<Perf | null>((last, p) => {
+    return !p.date ? last : (!last || p.date > last.date ? p : last)
+  }, null)
+}
+
+function lastAtOrBefore<T extends { date: string }>(entries: T[], date: string): T | null {
+  const filtered = entries.filter(e => e.date.slice(0, 10) <= date)
+  if (!filtered.length) return null
+  return [...filtered].sort((a, b) => b.date.localeCompare(a.date))[0]
+}
+
+function last30entries<T extends { date: string }>(entries: T[]): T[] {
+  const cutoff = addDays(todayLocal(), -30)
+  return entries
+    .filter(e => e.date.slice(0, 10) >= cutoff)
+    .sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export default function Nageurs() {
@@ -56,12 +88,13 @@ export default function Nageurs() {
   const [hrv,          setHrv]          = useState<HrvEntry[] | null>(null)
   const [poids,        setPoids]        = useState<PoidsEntry[] | null>(null)
   const [perfs,        setPerfs]        = useState<Perf[] | null>(null)
-  const [selectedDate, setSelectedDate] = useState(todayISO())
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   // ── Collapsible sections ──
-  const [openHrv,   setOpenHrv]   = useState(false)
-  const [openPoids, setOpenPoids] = useState(false)
-  const [openPerfs, setOpenPerfs] = useState(false)
+  const [openHrv,       setOpenHrv]       = useState(false)
+  const [openPoids,     setOpenPoids]     = useState(false)
+  const [openPerfs,     setOpenPerfs]     = useState(false)
+  const [openPerfEvent, setOpenPerfEvent] = useState<string | null>(null)
 
   // ── Edit name ──
   const [editOpen,   setEditOpen]   = useState(false)
@@ -84,9 +117,10 @@ export default function Nageurs() {
   function openDrawer(n: Nageur) {
     setSelected(n)
     setTiroirOpen(true)
-    setSelectedDate(todayISO())
+    setSelectedDate(null)
     setHrv(null); setPoids(null); setPerfs(null)
-    setOpenHrv(false); setOpenPoids(false); setOpenPerfs(false)
+    setOpenHrv(true); setOpenPoids(true); setOpenPerfs(true)
+    setOpenPerfEvent(null)
     setEditOpen(false); setEditErr(''); setConfirmDel(false)
     setEditPrenom(n.prenom); setEditNom(n.nom)
     fetchData(n)
@@ -98,16 +132,14 @@ export default function Nageurs() {
   }
 
   function prevDay() {
-    const d = new Date(selectedDate + 'T00:00:00')
-    d.setDate(d.getDate() - 1)
-    setSelectedDate(d.toISOString().slice(0, 10))
+    setSelectedDate(prev => prev === null ? todayLocal() : addDays(prev, -1))
   }
 
   function nextDay() {
-    const d = new Date(selectedDate + 'T00:00:00')
-    d.setDate(d.getDate() + 1)
-    if (d.toISOString().slice(0, 10) > todayISO()) return
-    setSelectedDate(d.toISOString().slice(0, 10))
+    setSelectedDate(prev => {
+      if (prev === null || prev >= todayLocal()) return prev
+      return addDays(prev, 1)
+    })
   }
 
   async function fetchData(n: Nageur) {
@@ -249,20 +281,54 @@ export default function Nageurs() {
     }
   }
 
-  // ── Date-filtered data for drawer ──
-  const hrvDay   = hrv?.find(h => h.date.slice(0, 10) === selectedDate)   ?? null
-  const poidsDay = poids?.find(p => p.date.slice(0, 10) === selectedDate) ?? null
-  const perfsDay = perfs?.filter(p => p.date?.slice(0, 10) === selectedDate) ?? []
+  // ── Computed data ──────────────────────────────────────────────────────────
+  const isOverview = selectedDate === null
 
-  // Latest date with any data (fallback link)
-  const latestDataDate = (() => {
-    const dates: string[] = []
-    if (hrv?.length)   dates.push([...hrv].sort((a, b)   => b.date.localeCompare(a.date))[0].date.slice(0, 10))
-    if (poids?.length) dates.push([...poids].sort((a, b) => b.date.localeCompare(a.date))[0].date.slice(0, 10))
-    return dates.sort().reverse()[0] ?? null
-  })()
+  // Last-known HRV/Poids at or before selectedDate (or most recent in overview)
+  const lastHrvEntry = hrv
+    ? isOverview
+      ? ([...hrv].sort((a, b) => b.date.localeCompare(a.date))[0] ?? null)
+      : lastAtOrBefore(hrv, selectedDate!)
+    : null
 
-  const noDataToday = hrv !== null && poids !== null && !hrvDay && !poidsDay && perfsDay.length === 0
+  const lastPoidsEntry = poids
+    ? isOverview
+      ? ([...poids].sort((a, b) => b.date.localeCompare(a.date))[0] ?? null)
+      : lastAtOrBefore(poids, selectedDate!)
+    : null
+
+  // Last 30 days for overview charts
+  const hrv30   = hrv   ? last30entries(hrv.filter(h => h.rmssd != null)) : []
+  const poids30 = poids ? last30entries(poids) : []
+
+  // Overview: group perfs by event
+  const perfEventMap: Map<string, Perf[]> | null = perfs ? (() => {
+    const map = new Map<string, Perf[]>()
+    perfs.filter(p => p.date && p.temps).forEach(p => {
+      const k = eventKey(p)
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(p)
+    })
+    return map
+  })() : null
+
+  // Day view: perfs on selected date
+  const perfsOnDay = !isOverview && perfs
+    ? perfs.filter(p => p.date?.slice(0, 10) === selectedDate)
+    : []
+
+  // Day view: best-at-or-before by event
+  const perfsBefore: Map<string, Perf[]> | null = !isOverview && perfs && selectedDate
+    ? (() => {
+        const map = new Map<string, Perf[]>()
+        perfs.filter(p => p.date && p.date.slice(0, 10) <= selectedDate!).forEach(p => {
+          const k = eventKey(p)
+          if (!map.has(k)) map.set(k, [])
+          map.get(k)!.push(p)
+        })
+        return map
+      })()
+    : null
 
   return (
     <div className={styles.root}>
@@ -373,20 +439,25 @@ export default function Nageurs() {
                 onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
                 title="Choisir une date"
               >
-                {formatFr(selectedDate)}
+                {isOverview ? "Vue d'ensemble" : formatFr(selectedDate)}
               </button>
-              <button className={styles.dateArrow} onClick={nextDay} disabled={selectedDate >= todayISO()} title="Jour suivant">→</button>
+              <button
+                className={styles.dateArrow}
+                onClick={nextDay}
+                disabled={isOverview || selectedDate! >= todayLocal()}
+                title="Jour suivant"
+              >→</button>
               <input
                 ref={dateInputRef}
                 type="date"
                 className={styles.dateHiddenInput}
-                value={selectedDate}
-                max={todayISO()}
+                value={selectedDate ?? ''}
+                max={todayLocal()}
                 onChange={e => { if (e.target.value) setSelectedDate(e.target.value) }}
               />
-              {selectedDate !== todayISO() && (
-                <button className={styles.dateTodayBtn} onClick={() => setSelectedDate(todayISO())}>
-                  Aujourd&apos;hui
+              {!isOverview && (
+                <button className={styles.dateTodayBtn} onClick={() => setSelectedDate(null)}>
+                  ← Vue d&apos;ensemble
                 </button>
               )}
             </div>
@@ -420,18 +491,6 @@ export default function Nageurs() {
               </div>
             </div>
 
-            {/* No data notice */}
-            {noDataToday && (
-              <div className={styles.noDataBar}>
-                <span>Aucune mesure ce jour</span>
-                {latestDataDate && (
-                  <button className={styles.noDataLink} onClick={() => setSelectedDate(latestDataDate)}>
-                    Dernière mesure : {formatFr(latestDataDate)}
-                  </button>
-                )}
-              </div>
-            )}
-
             {/* Group selector */}
             <div className={styles.drawerSection}>
               <label className={styles.sectionLabel}>Groupe</label>
@@ -454,23 +513,42 @@ export default function Nageurs() {
             <div className={styles.collapsible}>
               <button className={styles.collHdr} onClick={() => setOpenHrv(v => !v)}>
                 <span>HRV</span>
-                {hrvDay && <span className={styles.badge}>1</span>}
+                {lastHrvEntry?.rmssd != null && (
+                  <span className={styles.badge}>{lastHrvEntry.rmssd} ms</span>
+                )}
                 <span className={styles.chevron}>{openHrv ? '▲' : '▼'}</span>
               </button>
               {openHrv && (
                 <div className={styles.collBody}>
-                  {!hrvDay ? (
-                    <p className={styles.muted}>Aucune entrée ce jour</p>
+                  {hrv === null ? (
+                    <p className={styles.loadingText}>Chargement…</p>
+                  ) : !lastHrvEntry ? (
+                    <p className={styles.muted}>Aucune donnée</p>
                   ) : (
-                    <table className={styles.table}>
-                      <thead><tr><th>RMSSD</th><th>Note</th></tr></thead>
-                      <tbody>
-                        <tr>
-                          <td>{hrvDay.rmssd ?? '—'}</td>
-                          <td>{hrvDay.note  ?? '—'}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <>
+                      <div className={styles.lastVal}>
+                        <span className={styles.lastValNum}>
+                          {lastHrvEntry.rmssd ?? '—'}
+                          <span className={styles.lastValUnit}> ms RMSSD</span>
+                        </span>
+                        {!isOverview && lastHrvEntry.date.slice(0, 10) < selectedDate! && (
+                          <button
+                            className={styles.lastValDate}
+                            onClick={() => setSelectedDate(lastHrvEntry!.date.slice(0, 10))}
+                          >
+                            mesuré le {formatFr(lastHrvEntry.date)}
+                          </button>
+                        )}
+                      </div>
+                      {isOverview && hrv30.length > 0 && (
+                        <MiniGraphe
+                          data={hrv30.map(h => ({ date: h.date, value: h.rmssd ?? 0 }))}
+                          color={colors.c1}
+                          onPointClick={d => setSelectedDate(d)}
+                          height={110}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -480,15 +558,43 @@ export default function Nageurs() {
             <div className={styles.collapsible}>
               <button className={styles.collHdr} onClick={() => setOpenPoids(v => !v)}>
                 <span>Poids</span>
-                {poidsDay && <span className={styles.badge}>1</span>}
+                {lastPoidsEntry && (
+                  <span className={styles.badge}>{lastPoidsEntry.weight} kg</span>
+                )}
                 <span className={styles.chevron}>{openPoids ? '▲' : '▼'}</span>
               </button>
               {openPoids && (
                 <div className={styles.collBody}>
-                  {!poidsDay ? (
-                    <p className={styles.muted}>Aucune entrée ce jour</p>
+                  {poids === null ? (
+                    <p className={styles.loadingText}>Chargement…</p>
+                  ) : !lastPoidsEntry ? (
+                    <p className={styles.muted}>Aucune donnée</p>
                   ) : (
-                    <p className={styles.poidsVal}>{poidsDay.weight} kg</p>
+                    <>
+                      <div className={styles.lastVal}>
+                        <span className={styles.lastValNum}>
+                          {lastPoidsEntry.weight}
+                          <span className={styles.lastValUnit}> kg</span>
+                        </span>
+                        {!isOverview && lastPoidsEntry.date.slice(0, 10) < selectedDate! && (
+                          <button
+                            className={styles.lastValDate}
+                            onClick={() => setSelectedDate(lastPoidsEntry!.date.slice(0, 10))}
+                          >
+                            mesuré le {formatFr(lastPoidsEntry.date)}
+                          </button>
+                        )}
+                      </div>
+                      {isOverview && poids30.length > 0 && (
+                        <MiniGraphe
+                          data={poids30.map(p => ({ date: p.date, value: p.weight }))}
+                          color={colors.c1}
+                          formatY={v => v + ' kg'}
+                          onPointClick={d => setSelectedDate(d)}
+                          height={110}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -498,22 +604,102 @@ export default function Nageurs() {
             <div className={styles.collapsible}>
               <button className={styles.collHdr} onClick={() => setOpenPerfs(v => !v)}>
                 <span>Performances</span>
-                {perfsDay.length > 0 && <span className={styles.badge}>{perfsDay.length}</span>}
+                {!isOverview && perfsOnDay.length > 0 && (
+                  <span className={styles.badge}>{perfsOnDay.length}</span>
+                )}
                 <span className={styles.chevron}>{openPerfs ? '▲' : '▼'}</span>
               </button>
               {openPerfs && (
                 <div className={styles.collBody}>
-                  {perfsDay.length === 0 ? (
-                    <p className={styles.muted}>Aucune performance ce jour</p>
+                  {perfs === null ? (
+                    <p className={styles.loadingText}>Chargement…</p>
+                  ) : isOverview ? (
+                    // ── Overview: event list with best + last + expandable chart ──
+                    !perfEventMap || perfEventMap.size === 0 ? (
+                      <p className={styles.muted}>Aucune donnée</p>
+                    ) : (
+                      <ul className={styles.eventList}>
+                        {Array.from(perfEventMap.entries()).map(([key, ps]) => {
+                          const best  = bestPerf(ps)
+                          const last  = lastPerf(ps)
+                          const chart = ps
+                            .filter(p => p.date && p.temps)
+                            .map(p => ({ date: p.date.slice(0, 10), value: timeToSec(p.temps) }))
+                            .sort((a, b) => a.date.localeCompare(b.date))
+                          return (
+                            <li key={key} className={styles.eventItem}>
+                              <button
+                                className={styles.eventHdr}
+                                onClick={() => setOpenPerfEvent(v => v === key ? null : key)}
+                              >
+                                <span className={styles.eventName}>{eventLabel(ps[0])}</span>
+                                <span className={styles.eventBest}>{best?.temps ?? '—'}</span>
+                                {chart.length >= 2 && (
+                                  <span className={styles.chevron}>{openPerfEvent === key ? '▲' : '▼'}</span>
+                                )}
+                              </button>
+                              {last && last !== best && (
+                                <div className={styles.eventLastRow}>
+                                  <span className={styles.eventLastLabel}>Dernier</span>
+                                  <span className={styles.eventLastTime}>{last.temps}</span>
+                                  <span className={styles.eventLastDate}>{formatFr(last.date)}</span>
+                                </div>
+                              )}
+                              {openPerfEvent === key && chart.length >= 2 && (
+                                <MiniGraphe
+                                  data={chart}
+                                  color={colors.c1}
+                                  invertY
+                                  formatY={secsToLabel}
+                                  onPointClick={d => setSelectedDate(d)}
+                                  height={100}
+                                />
+                              )}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )
                   ) : (
-                    <ul className={styles.perfsList}>
-                      {perfsDay.map((p, i) => (
-                        <li key={i} className={styles.perfRow}>
-                          <span className={styles.perfEvent}>{p.distance}m {p.nage} ({p.bassin}m)</span>
-                          <span className={styles.perfTime}>{p.temps}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    // ── Day view: today's perfs first, then best-at-or-before ──
+                    !perfsBefore || perfsBefore.size === 0 ? (
+                      <p className={styles.muted}>Aucune donnée</p>
+                    ) : (
+                      <ul className={styles.eventList}>
+                        {/* Perfs done on this day */}
+                        {perfsOnDay.map((p, i) => (
+                          <li key={'d' + i} className={styles.eventItem}>
+                            <div className={styles.eventHdr}>
+                              <span className={styles.eventName}>{eventLabel(p)}</span>
+                              <span className={styles.eventBest}>{p.temps}</span>
+                            </div>
+                          </li>
+                        ))}
+                        {/* Best-at-or-before for events NOT done today */}
+                        {Array.from(perfsBefore.entries())
+                          .filter(([key]) => !perfsOnDay.some(p => eventKey(p) === key))
+                          .map(([key, ps]) => {
+                            const best = bestPerf(ps)
+                            if (!best) return null
+                            return (
+                              <li key={'b' + key} className={styles.eventItem}>
+                                <div className={styles.eventHdr}>
+                                  <span className={styles.eventName}>{eventLabel(best)}</span>
+                                  <span className={styles.eventBest}>{best.temps}</span>
+                                </div>
+                                {best.date.slice(0, 10) < selectedDate! && (
+                                  <button
+                                    className={styles.lastValDate}
+                                    onClick={() => setSelectedDate(best!.date.slice(0, 10))}
+                                  >
+                                    mesuré le {formatFr(best.date)}
+                                  </button>
+                                )}
+                              </li>
+                            )
+                          })}
+                      </ul>
+                    )
                   )}
                 </div>
               )}
