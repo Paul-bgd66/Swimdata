@@ -164,6 +164,8 @@ export default function GroupeSelect() {
       })
       const data = await res.json() as { error?: string }
       if (!res.ok) throw new Error(data.error || 'Erreur ' + res.status)
+      const grpNom = groupes.find(g => g.id === groupeId)?.nom ?? 'Sans groupe'
+      showToast(`✓ ${nageur.prenom} ${nageur.nom} → ${grpNom}`)
     } catch (e) {
       // Revert both context and local state
       setNageurGids(prev => ({ ...prev, [nageur.id]: prevGid }))
