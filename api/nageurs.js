@@ -34,7 +34,7 @@ export default async function handler(req) {
 
     let body;
     try { body = await req.json(); } catch { return json(400, { error: 'Invalid JSON' }); }
-    const { id, groupeId } = body;
+    const { id, groupeId, prenom, nom } = body;
     if (!id) return json(400, { error: 'id requis' });
 
     const { data: coachRow } = await sb.from('coaches').select('club_id').eq('id', coachId).maybeSingle();
@@ -42,14 +42,31 @@ export default async function handler(req) {
     const { data: nagRow } = await sb.from('nageurs').select('club_id').eq('id', id).maybeSingle();
     if (!nagRow || nagRow.club_id !== coachRow.club_id) return json(403, { error: 'Non autorisé.' });
 
-    const { error } = await sb.from('nageurs').update({ groupe_id: groupeId || null }).eq('id', id);
+    const up = {};
+    if (groupeId !== undefined) up.groupe_id = groupeId || null;
+    if (prenom !== undefined && prenom.trim()) up.prenom = prenom.trim();
+    if (nom    !== undefined && nom.trim())    up.nom    = nom.trim();
+    if (Object.keys(up).length === 0) return json(400, { error: 'Aucun champ à modifier' });
+
+    const { error } = await sb.from('nageurs').update(up).eq('id', id);
     if (error) return json(500, { error: error.message });
     return json(200, { ok: true });
   }
 
   if (req.method === 'DELETE') {
+    const authHeader = (req.headers.get('Authorization') || '').trim();
+    if (!authHeader.startsWith('Bearer ')) return json(401, { error: 'Auth required' });
+    const { data: { user }, error: authErr } = await sb.auth.getUser(authHeader.slice(7));
+    if (authErr || !user) return json(401, { error: 'Token invalide' });
+
     const id = url.searchParams.get('id');
     if (!id) return json(400, { error: 'id requis' });
+
+    const { data: coachRow } = await sb.from('coaches').select('club_id').eq('id', user.id).maybeSingle();
+    if (!coachRow) return json(403, { error: 'Coach introuvable.' });
+    const { data: nagRow } = await sb.from('nageurs').select('club_id').eq('id', id).maybeSingle();
+    if (!nagRow || nagRow.club_id !== coachRow.club_id) return json(403, { error: 'Non autorisé.' });
+
     const { error } = await sb.from('nageurs').update({ active: false }).eq('id', id);
     if (error) return json(500, { error: error.message });
     return json(200, { ok: true });

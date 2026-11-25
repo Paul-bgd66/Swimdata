@@ -1,0 +1,51 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  z-index: 3000;
+  pointer-events: none;
+  transition: background 0.25s;
+}
+
+.overlayOpen {
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+/* Desktop: right sliding panel */
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 400px;
+  background: var(--card);
+  box-shadow: -4px 0 32px rgba(0, 0, 0, 0.18);
+  z-index: 3001;
+  overflow-y: auto;
+  transform: translateX(105%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panelOpen {
+  transform: translateX(0);
+}
+
+/* Mobile: bottom sheet */
+@media (max-width: 600px) {
+  .panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 90vh;
+    max-height: 90vh;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(105%);
+  }
+
+  .panelOpen {
+    transform: translateY(0);
+  }
+}

@@ -10,6 +10,7 @@ import type { Club, Nageur, Groupe } from '@/lib/types'
 import { resolveClubColors } from '@/lib/constants'
 import { t } from '@/lib/i18n'
 import Coachs      from './tabs/Coachs'
+import Nageurs     from './tabs/Nageurs'
 import Perfs       from './tabs/Perfs'
 import Poids       from './tabs/Poids'
 import Planning    from './tabs/Planning'
@@ -196,6 +197,14 @@ export default function CoachClient() {
     setNageurs(prev => prev.map(n => n.id === id ? { ...n, groupe_id: groupeId } : n))
   }, [])
 
+  const updateNageur = useCallback((id: string, updates: Partial<Pick<Nageur, 'prenom' | 'nom'>>) => {
+    setNageurs(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n))
+  }, [])
+
+  const removeNageur = useCallback((id: string) => {
+    setNageurs(prev => prev.filter(n => n.id !== id))
+  }, [])
+
   const showToast = useCallback((msg: string) => {
     setToast(msg)
     if (toastTimer.current) clearTimeout(toastTimer.current)
@@ -230,9 +239,11 @@ export default function CoachClient() {
     setCoachMode, setLang, showToast,
     groupes, groupeActif: groupeActifState, sousGroupes, sousGroupeActif, nageursFiltres,
     setGroupeActif, setSousGroupeActif, showGroupeSelect, updateGroupes, updateNageurGroupeId,
+    updateNageur, removeNageur,
   }), [club, coach, nageurs, colors, theme, lang, coachMode, showToast, // eslint-disable-line react-hooks/exhaustive-deps
       groupes, groupeActifState, sousGroupes, sousGroupeActif, nageursFiltres,
-      setGroupeActif, showGroupeSelect, updateGroupes, updateNageurGroupeId])
+      setGroupeActif, showGroupeSelect, updateGroupes, updateNageurGroupeId,
+      updateNageur, removeNageur])
 
   if (status === 'loading') {
     return <div className={styles.loadingScreen}>SWIMDATA…</div>
@@ -296,7 +307,9 @@ export default function CoachClient() {
                   {activeTabDef ? t(activeTabDef.labelKey, lang) : ''}
                 </div>
                 <SubGroupeFilter />
-                {activeTab === 'coachs' ? (
+                {activeTab === 'swimmers' ? (
+                  <Nageurs />
+                ) : activeTab === 'coachs' ? (
                   <Coachs />
                 ) : activeTab === 'perf' ? (
                   <Perfs />
